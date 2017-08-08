@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1502226410754.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "D5AA7502",
+    "lastKnownWriteTime" : -5764607522764010496,
+    "last_content_update" : 1502226410754,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "1803E1A7",
+        "caption" : "sumstats",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=sumstats&cache_key=1803E1A7",
+        "displayedObservations" : 3,
+        "environment" : "",
+        "object" : "sumstats",
+        "preview" : 0,
+        "totalObservations" : 3,
+        "variables" : 3
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

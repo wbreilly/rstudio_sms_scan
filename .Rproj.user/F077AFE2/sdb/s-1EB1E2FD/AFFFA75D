@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1502226564011.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "AFFFA75D",
+    "lastKnownWriteTime" : 0,
+    "last_content_update" : 1502226564011,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "5262F3A8",
+        "caption" : "d25sumstats.con",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=d25sumstats.con&cache_key=5262F3A8",
+        "displayedObservations" : "3",
+        "environment" : "",
+        "object" : "d25sumstats.con",
+        "preview" : "0",
+        "totalObservations" : "3",
+        "variables" : "5"
+    },
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

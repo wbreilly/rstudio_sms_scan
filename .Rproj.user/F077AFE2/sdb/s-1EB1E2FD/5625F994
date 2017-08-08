@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1502225794242.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "5625F994",
+    "lastKnownWriteTime" : 0,
+    "last_content_update" : 1502225794242,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "A60C9F80",
+        "caption" : "dsansnas",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=dsansnas&cache_key=A60C9F80",
+        "displayedObservations" : 2690,
+        "environment" : "",
+        "object" : "dsansnas",
+        "preview" : 0,
+        "totalObservations" : 2690,
+        "variables" : 15
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
