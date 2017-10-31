@@ -5,7 +5,7 @@
 
 library(tidyverse)
 
-d = read.csv("~/drive/grad_school/DML_WBR/Sequences_Exp3/sms_scan_drive/sms_scan_fmri_copy/all_sms_scan_retreival_dat/all_sms_scan_retrieval_8_8_17.csv", 
+d = read.csv("~/drive/grad_school/DML_WBR/Sequences_Exp3/sms_scan_drive/sms_scan_fmri_copy/all_sms_scan_retreival_dat/all_retrieval_10_30_17.csv", 
              na.strings="NaN", stringsAsFactors=FALSE)
 
 d$rt = as.numeric(d$rt)
@@ -14,8 +14,6 @@ d$sub = as.numeric(d$sub)
 #get rid of column info for each block
 d = d[!(d$block == "" | d$block == "block"), ]
 
-#subs to throw out 
-# none so far
 
 # add position info
 d = mutate(d, position = rep(c(1:5),times = dim(d)[1]/5))
@@ -31,20 +29,27 @@ noresp.exclude = noresp.exclude %>% mutate(zresp = (n - x)/y)
 # looks like it isn't an issue so far. only 10 total from 4 subjects. 
 # Might want to look at proportion of yes/no at some point
 
-
-# the hard way to assign position labels
-# d$position = NA
-# x = 2
+###################################################
+# ID participants based on how frequently they give the same response 
+# x =
+# d$responsecopy = d$response
+# x= 0 
 # for (i in 2:dim(d)[1]){
-#   while(x < 6){
-#     if (x == 1) {d[i,13] = x; x = x+1;break;}
-#     else if (x > 1 & x < 5 & d[i,5] == d[i-1,5]) {d[i,13] = x; x = x+1;break;}
-#     else if (x == 5) {d[i,13] = x; x = 1;break;}
-# }}
-# check that they are the same
-# d = d %>% mutate(poscheck = position == pos)
-# sum(d$poscheck, na.rm = TRUE)
-
+#   if (d[i,1] == d[i-1,1]){
+#     if (d[i,13] == d[i-1,13]){
+#       d[i,14] = 1 + x; x = x+1
+#     } else {
+#       x = 0; d[i,14] = 0
+#     }
+#   } else {
+#     x = 0; d[i,14] = 0
+#   }
+# }
+# 
+# 
+# # count how many consecutive same responses
+# nonono = d %>% group_by(sub) %>% summarise(mean = mean(V14), sd = sd(V14))
+# nonono = nonono %>% mutate(zmean = scale(mean))
 
 
 # add observation column to df
@@ -209,15 +214,81 @@ p.rrb.con = p.rrb.con + geom_bar(stat = "identity",position = position_dodge(0.9
 p.rrb.con = p.rrb.con + coord_cartesian(ylim=c(500,1100))
 p.rrb.con
 
+# # # # # # # # # # # # # # # #
+# # make a bar graph of position by conditiong with SE
+# # get n
+# counts = count(group_by(dclean,con.num, position))
+# 
+# # add n to sumstats
+# sumstats.pos[,5] = counts[,3]
+# 
+# # add SE
+# sumstats.pos = mutate(sumstats.pos, SE = SD/sqrt(n))
+# 
+# # create a bar graph
+# limits <- aes(ymax = sumstats.pos$mean + sumstats.pos$SE,
+#               ymin = sumstats.pos$mean - sumstats.pos$SE)
+# 
+# p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(con.num), y = mean,
+#                                              fill = factor(position)))
+# p.pos.con = p.pos.con + geom_bar(stat = "identity",
+#                                  position = position_dodge(0.9)) +
+#   geom_errorbar(limits, position = position_dodge(0.9),
+#                 width = 0.15) + 
+#   labs(x = "Condition", y = "RT") +
+#   ggtitle("RT by Position and Condition") +
+#   scale_fill_discrete(name = "Position")  +
+#   scale_x_discrete("Conditions", labels = 
+#                      c("1" = "Intact", "2" = "Scrambled-Fixed", 
+#                        "3" = "Scrambled-Random"))
+# p.pos.con = p.pos.con + coord_cartesian(ylim=c(500,1200))
+# p.pos.con
+# ######################################
 # # # # # # # # # # # # # # #
-# make a bar graph of position by conditiong with SE
-# get n
-counts = count(group_by(dclean,con.num, position))
+# condition means
+# This is so dumb
+sumstats.pos.se = dclean %>% group_by(con.num, sub,position) %>% summarise(mean = mean(rt))
+# get sample means
+con1.pos1 = sumstats.pos.se %>% filter(con.num ==1, position == 1) 
+con1.pos2 = sumstats.pos.se %>% filter(con.num ==1, position == 2) 
+con1.pos3 = sumstats.pos.se %>% filter(con.num ==1, position == 3) 
+con1.pos4 = sumstats.pos.se %>% filter(con.num ==1, position == 4) 
+con1.pos5 = sumstats.pos.se %>% filter(con.num ==1, position == 5) 
 
-# add n to sumstats
-sumstats.pos[,5] = counts[,3]
+con2.pos1 = sumstats.pos.se %>% filter(con.num ==2, position == 1) 
+con2.pos2 = sumstats.pos.se %>% filter(con.num ==2, position == 2) 
+con2.pos3 = sumstats.pos.se %>% filter(con.num ==2, position == 3) 
+con2.pos4 = sumstats.pos.se %>% filter(con.num ==2, position == 4) 
+con2.pos5 = sumstats.pos.se %>% filter(con.num ==2, position == 5) 
 
+con3.pos1 = sumstats.pos.se %>% filter(con.num ==3, position == 1) 
+con3.pos2 = sumstats.pos.se %>% filter(con.num ==3, position == 2) 
+con3.pos3 = sumstats.pos.se %>% filter(con.num ==3, position == 3) 
+con3.pos4 = sumstats.pos.se %>% filter(con.num ==3, position == 4) 
+con3.pos5 = sumstats.pos.se %>% filter(con.num ==3, position == 5) 
+
+
+
+# get SD of sammple mean 
+sumstats.pos[1,4] = sd(con1.pos1$mean)
+sumstats.pos[2,4] = sd(con1.pos2$mean)
+sumstats.pos[3,4] = sd(con1.pos3$mean)
+sumstats.pos[4,4] = sd(con1.pos4$mean)
+sumstats.pos[5,4] = sd(con1.pos5$mean)
+
+sumstats.pos[6,4] = sd(con2.pos1$mean)
+sumstats.pos[7,4] = sd(con2.pos2$mean)
+sumstats.pos[8,4] = sd(con2.pos3$mean)
+sumstats.pos[9,4] = sd(con2.pos4$mean)
+sumstats.pos[10,4] = sd(con2.pos5$mean)
+
+sumstats.pos[11,4] = sd(con3.pos1$mean)
+sumstats.pos[12,4] = sd(con3.pos2$mean)
+sumstats.pos[13,4] = sd(con3.pos3$mean)
+sumstats.pos[14,4] = sd(con3.pos4$mean)
+sumstats.pos[15,4] = sd(con3.pos5$mean)
 # add SE
+n = length(unique(dclean$sub))
 sumstats.pos = mutate(sumstats.pos, SE = SD/sqrt(n))
 
 # create a bar graph
@@ -236,10 +307,9 @@ p.pos.con = p.pos.con + geom_bar(stat = "identity",
   scale_x_discrete("Conditions", labels = 
                      c("1" = "Intact", "2" = "Scrambled-Fixed", 
                        "3" = "Scrambled-Random"))
-p.pos.con = p.pos.con + coord_cartesian(ylim=c(500,1100))
+p.pos.con = p.pos.con + coord_cartesian(ylim=c(500,1250))
 p.pos.con
-
-######################################l
+# ######################################
 # ANOVA
 # type 3 SS w/in subs ANOVA
 library(afex)
