@@ -5,7 +5,7 @@
 
 library(tidyverse)
 
-d = read.csv("~/drive/grad_school/DML_WBR/Sequences_Exp3/sms_scan_drive/sms_scan_fmri_copy/all_sms_scan_retreival_dat/all_retrieval_10_30_17.csv", 
+d = read.csv("~/drive/grad_school/DML_WBR/Sequences_Exp3/sms_scan_drive/sms_scan_fmri_copy/all_sms_scan_retreival_dat/all_retrieval_11_1_17.csv", 
              na.strings="NaN", stringsAsFactors=FALSE)
 
 d$rt = as.numeric(d$rt)
@@ -55,6 +55,48 @@ noresp.exclude = noresp.exclude %>% mutate(zresp = (n - x)/y)
 # add observation column to df
 d = mutate(d, obs = 1:dim(d)[1])
 
+##################################
+# looking into no_resp's
+d_noresp = d
+d_noresp = mutate(d_noresp, pres_num = rep(c(1:675),times = 13))
+d_noresp$response = ifelse(d_noresp$response == "yes", 1, ifelse(d_noresp$response == "no", 2, 3))
+d_noresp$obs = as.numeric(d_noresp$obs)
+
+#plot histogram of different responses
+noresp_hist = ggplot(d_noresp, aes(x = factor(response), fill = factor(sub))) + geom_histogram(binwidth = 1, stat = "count")
+noresp_hist = noresp_hist + 
+  scale_x_discrete("Responses", labels = c("1" = "Yes", "2" = "No","3" = "no response")) +
+  ggtitle("Histogram of Retrieval Responses")
+noresp_hist
+
+## plot histogram of no_resp's across trial time 
+# count no only responses 
+d_onlynoresp = d_noresp %>% filter(d_noresp$response ==3)
+d_noresp.count = d_onlynoresp %>% group_by(sub) %>% count(response)
+
+noresp_hist_time = ggplot(d_onlynoresp, aes(x = factor(pres_num), fill = factor(sub), stat = "count")) +
+  geom_histogram(bins = 675,stat = "count")
+  noresp_hist_time = noresp_hist_time + 
+  ggtitle("Histogram of 'NoResponses' Across Trials")
+noresp_hist_time
+
+# facet_grid()
+
+
+
+d_noresp$response = as.numeric(d_noresp$response)
+
+
+# add condition info
+d_noresp= d_noresp %>% mutate(con.num = condition)
+d_noresp[,15] = ifelse(d_noresp[,15] == "intact", 1, ifelse(d_noresp[,15] == "scrambled", 2, 3))
+
+
+
+
+
+
+#############################
 # this didn't work for sms2 retr dat. NaN instead of NA?
 exrows = d[!complete.cases(d$rt),14]
 dsansnas = d[-c(exrows),]
