@@ -12,7 +12,7 @@ rsa$postion = as.factor(rsa$position)
 # only p1 SVSS
 # rsa =read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/RSAmeans_SVSS_p1_11_3_17.txt", header = TRUE, stringsAsFactors = TRUE)
 # all positions SVSS
-rsa =read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/RSAmeans_SVSS_11_3_17.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa =read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/RSAmeans_SVSS_11_3_17.txt", header = TRUE, stringsAsFactors = TRUE)
 
 rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity))
 
@@ -40,7 +40,7 @@ rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
 
 # now assign group label in single column
 rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
- # delete the logical vectors
+# delete the logical vectors
 rsa[,5:8] = NULL
 # make group a factor
 rsa$roi_group = as.factor(rsa$roi_group)
@@ -120,17 +120,17 @@ contrast(ls.AT,c1)
 ###########################################
 # Plot PM by region
 # plot by cluster + geom_line(group =1)
-PM.plot = ggplot(data = rsa.PM, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 5)
+PM.plot = ggplot(data = rsa.PM, aes(x = factor(position), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~condition, ncol = 5) + scale_y_continuous(limits = c(-.2, .6))
 PM.plot
 
 # Plot PM by region
 # plot by cluster + geom_line(group =1)
-AT.plot = ggplot(data = rsa.AT, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2)
+AT.plot = ggplot(data = rsa.AT, aes(x = factor(position), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~condition, ncol = 2) + scale_y_continuous(limits = c(-.2, .6))
 AT.plot
 
 # Plot PM by region
 # plot by cluster + geom_line(group =1)
-HIPP.plot = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2)
+HIPP.plot = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2) + scale_y_continuous(limits = c(-.2, .6))
 HIPP.plot
 
 ##########################
@@ -138,3 +138,21 @@ HIPP.plot
 HIPP.plot.allconds = ggplot(data = RSA.HIPP.allconds, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2)
 HIPP.plot.allconds
 
+
+# plot differences between intact and scrambled across positions
+sumstats.pos.plot = rsa.PM %>% group_by(sub, condition, position) %>% summarise(simmean = mean(similarity))
+sumstats.df = data.frame(sumstats.pos.plot)
+sumstats.pos.plot = sumstats.df %>% group_by(condition,position) %>% summarise(mean = mean(simmean), sd = sd(simmean))
+sumstats.pos.plot = data.frame(sumstats.pos.plot)
+sumstats.pos.plot = mutate(sumstats.pos.plot, SE = sd/sqrt(12))
+
+# create a bar graph
+limits <- aes(ymax = sumstats.pos.plot$mean + sumstats.pos.plot$SE,
+              ymin = sumstats.pos.plot$mean - sumstats.pos.plot$SE)
+
+p.3way <- ggplot(data = sumstats.pos.plot, aes(x = factor(con.num), y = mean,
+                                             fill = factor(position)))
+p.pos.con = p.pos.con + geom_bar(stat = "identity",
+                                 position = position_dodge(0.9)) +
+  geom_errorbar(limits, position = position_dodge(0.9),
+                width = 0.15) + 
