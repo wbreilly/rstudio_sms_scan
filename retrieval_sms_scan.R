@@ -7,9 +7,10 @@ library(tidyverse)
 
 d = read.csv("~/drive/grad_school/DML_WBR/Sequences_Exp3/sms_scan_drive/sms_scan_fmri_copy/all_sms_scan_retreival_dat/all_retrieval_11_1_17.csv", 
              na.strings="NaN", stringsAsFactors=FALSE)
+d = d %>% filter(sub != 8)
 
 d$rt = as.numeric(d$rt)
-d$sub = as.numeric(d$sub)
+d$sub = as.factor(d$sub)
 
 #get rid of column info for each block
 d = d[!(d$block == "" | d$block == "block"), ]
@@ -57,39 +58,39 @@ d = mutate(d, obs = 1:dim(d)[1])
 
 ##################################
 # looking into no_resp's
-d_noresp = d
-d_noresp = mutate(d_noresp, pres_num = rep(c(1:675),times = 13))
-d_noresp$response = ifelse(d_noresp$response == "yes", 1, ifelse(d_noresp$response == "no", 2, 3))
-d_noresp$obs = as.numeric(d_noresp$obs)
-
-#plot histogram of different responses
-noresp_hist = ggplot(d_noresp, aes(x = factor(response), fill = factor(sub))) + geom_histogram(binwidth = 1, stat = "count")
-noresp_hist = noresp_hist + 
-  scale_x_discrete("Responses", labels = c("1" = "Yes", "2" = "No","3" = "no response")) +
-  ggtitle("Histogram of Retrieval Responses")
-noresp_hist
-
-## plot histogram of no_resp's across trial time 
-# count no only responses 
-d_onlynoresp = d_noresp %>% filter(d_noresp$response ==3)
-d_noresp.count = d_onlynoresp %>% group_by(sub) %>% count(response)
-
-noresp_hist_time = ggplot(d_onlynoresp, aes(x = factor(pres_num), fill = factor(sub), stat = "count")) +
-  geom_histogram(bins = 675,stat = "count")
-  noresp_hist_time = noresp_hist_time + 
-  ggtitle("Histogram of 'NoResponses' Across Trials")
-noresp_hist_time
-
-# facet_grid()
-
-
-
-d_noresp$response = as.numeric(d_noresp$response)
-
-
-# add condition info
-d_noresp= d_noresp %>% mutate(con.num = condition)
-d_noresp[,15] = ifelse(d_noresp[,15] == "intact", 1, ifelse(d_noresp[,15] == "scrambled", 2, 3))
+# d_noresp = d
+# d_noresp = mutate(d_noresp, pres_num = rep(c(1:675),times = 13))
+# d_noresp$response = ifelse(d_noresp$response == "yes", 1, ifelse(d_noresp$response == "no", 2, 3))
+# d_noresp$obs = as.numeric(d_noresp$obs)
+# 
+# #plot histogram of different responses
+# noresp_hist = ggplot(d_noresp, aes(x = factor(response), fill = factor(sub))) + geom_histogram(binwidth = 1, stat = "count")
+# noresp_hist = noresp_hist + 
+#   scale_x_discrete("Responses", labels = c("1" = "Yes", "2" = "No","3" = "no response")) +
+#   ggtitle("Histogram of Retrieval Responses")
+# noresp_hist
+# 
+# ## plot histogram of no_resp's across trial time 
+# # count no only responses 
+# d_onlynoresp = d_noresp %>% filter(d_noresp$response ==3)
+# d_noresp.count = d_onlynoresp %>% group_by(sub) %>% count(response)
+# 
+# noresp_hist_time = ggplot(d_onlynoresp, aes(x = factor(pres_num), fill = factor(sub), stat = "count")) +
+#   geom_histogram(bins = 675,stat = "count")
+#   noresp_hist_time = noresp_hist_time + 
+#   ggtitle("Histogram of 'NoResponses' Across Trials")
+# noresp_hist_time
+# 
+# # facet_grid()
+# 
+# 
+# 
+# d_noresp$response = as.numeric(d_noresp$response)
+# 
+# 
+# # add condition info
+# d_noresp= d_noresp %>% mutate(con.num = condition)
+# d_noresp[,15] = ifelse(d_noresp[,15] == "intact", 1, ifelse(d_noresp[,15] == "scrambled", 2, 3))
 
 
 
@@ -141,11 +142,11 @@ sumstats.rep.con = dclean %>% group_by(repetition,con.num) %>% summarise(mean = 
 # look at rt by position
 #####################################################################################
 sumstats.pos = dclean %>% group_by(con.num, position) %>% summarise(mean = mean(rt), SD = sd(rt))
-
-p.pos =  ggplot(data=sumstats.pos, aes(x=position, y=mean, group=con.num, colour = con.num)) +
-  geom_line(stat = "identity") + 
-  ggtitle("SMS2: Condition * Position ")
-p.pos
+# 
+# p.pos =  ggplot(data=sumstats.pos, aes(x=position, y=mean, group=con.num, colour = con.num)) +
+#   geom_line(stat = "identity") + 
+#   ggtitle("SMS2: Condition * Position ")
+# p.pos
 
 #############################################
 # mean pos 4-5 by condition
@@ -289,6 +290,9 @@ p.rrb.con
 # # # # # # # # # # # # # # #
 # condition means
 # This is so dumb
+# dclean[,4] = ifelse(dclean[,4] == "intact", "intact", ifelse(dclean[,4] == "scrambled", "scrambled","random"))
+# dclean$condition = as.factor(dclean$condition)
+
 sumstats.pos.se = dclean %>% group_by(con.num, sub,position) %>% summarise(mean = mean(rt))
 # get sample means
 con1.pos1 = sumstats.pos.se %>% filter(con.num ==1, position == 1) 
@@ -330,27 +334,66 @@ sumstats.pos[13,4] = sd(con3.pos3$mean)
 sumstats.pos[14,4] = sd(con3.pos4$mean)
 sumstats.pos[15,4] = sd(con3.pos5$mean)
 # add SE
+
+
 n = length(unique(dclean$sub))
 sumstats.pos = mutate(sumstats.pos, SE = SD/sqrt(n))
-
+sumstats.pos[,1] = ifelse(sumstats.pos[,1] == "1", "Intact", ifelse(sumstats.pos[,1] == "2","Scrambled-Fixed", "Scrambled-Random"))
+# save
+sumstats.pos$exp = c(rep(2,15))
+write.csv(sumstats.pos, "sms_scan_retrieval_posplot.csv")
+# sumstats.pos = data.frame(sumstats.pos)
+# sumstas.pos = sumstats.pos %>%  arrange(con.num )
 # create a bar graph
+# limits <- aes(ymax = sumstats.pos$mean + sumstats.pos$SE,
+#               ymin = sumstats.pos$mean - sumstats.pos$SE)
+# 
+# p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(position), y = mean, fill = factor(position))) 
+# p.pos.con = p.pos.con + geom_bar(stat = "identity",
+#                                  position = position_dodge(0.9)) +
+#   geom_errorbar(limits, position = position_dodge(0.9),
+#                 width = 0.15) + 
+#   labs(x = NULL, y = "Reaction Time") +
+#   ggtitle("Event Schema Knowledge Faciliates Semantic Decisions") 
+# # +scale_fill_discrete(name = "Condition")  #+ scale_x_discrete("Conditions", labels =    c("1" = "Intact", "2" = "Scrambled-Fixed", "3" = "Scrambled-Random"))
+# p.pos.con = p.pos.con + coord_cartesian(ylim=c(550,1150)) + facet_wrap(~con.num) +  guides(fill = FALSE) 
+# p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold",height = 6, width = 10))
+#                                                                                                               
+# p.pos.con
+# ggsave("scan_retrieval_RT.eps", plot = last_plot(), dpi = 600 )
+# 1150 X 750 doesn't work. Best would be to put all in one facet_grid figure 
+# bring over exp 1 data 
+sumstats.pos.exp1 = read.csv("/Users/wbr/walter/dml/sms2.analyses/sms2_exp1_retrieval_posplot.csv",stringsAsFactors = TRUE)
+# sms scan data
+sumstats.pos.scan = read.csv("sms_scan_retrieval_posplot.csv",stringsAsFactors = TRUE)
+# combine them
+sumstats.pos = rbind(sumstats.pos.exp1,sumstats.pos.scan)
+# change levels for nice labels
+sumstats.pos$exp = as.factor(sumstats.pos$exp)
+levels(sumstats.pos$exp) <- c("Exp. 1 (n = 40)", "FMRI (n = 12)")
+
+
+# in case I really mess this up, copy fresh version of plot spec 
 limits <- aes(ymax = sumstats.pos$mean + sumstats.pos$SE,
               ymin = sumstats.pos$mean - sumstats.pos$SE)
 
-p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(con.num), y = mean,
-                                             fill = factor(position)))
+p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(position), y = mean, fill = factor(position))) 
 p.pos.con = p.pos.con + geom_bar(stat = "identity",
                                  position = position_dodge(0.9)) +
   geom_errorbar(limits, position = position_dodge(0.9),
                 width = 0.15) + 
-  labs(x = "Condition", y = "RT") +
-  ggtitle("RT by Position and Condition") +
-  scale_fill_discrete(name = "Position")  +
-  scale_x_discrete("Conditions", labels = 
-                     c("1" = "Intact", "2" = "Scrambled-Fixed", 
-                       "3" = "Scrambled-Random"))
-p.pos.con = p.pos.con + coord_cartesian(ylim=c(500,1250))
+  labs(x = "Verb Position", y = "Reaction Time (ms)") +
+  ggtitle("Event Schema Knowledge Faciliates Semantic Decisions") 
+# +scale_fill_discrete(name = "Condition")  #+ scale_x_discrete("Conditions", labels =    c("1" = "Intact", "2" = "Scrambled-Fixed", "3" = "Scrambled-Random"))
+p.pos.con = p.pos.con + coord_cartesian(ylim=c(550,1150)) + facet_grid(exp~con.num) +  guides(fill = FALSE) 
+p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold")) + scale_y_continuous(breaks = c(600,700,800,900,1000))
+
 p.pos.con
+ggsave("retrieval_plot_exp1_and_scan.eps", plot = last_plot(), dpi = 600 )
+
+
+
+
 # ######################################
 # ANOVA
 # type 3 SS w/in subs ANOVA
@@ -719,3 +762,15 @@ d.pos1$repetition = as.factor(d.pos1$repetition)
 apos1 = aov_ez("sub", "rt", d.pos1, within = c("con.num","repetition", "rrb"))
 apos1
 lsmeans(apos1,"con.num",contr = "pairwise", adjust = "holm")  
+
+
+#####################################################
+# for sfn 
+# diff between intact and scrambled rts for every subject 
+d25[,4] = ifelse(d25[,4] == "intact", "intact", ifelse(d25[,4] == "scrambled", "scrambled","random"))
+d25$condition = as.factor(d25$condition)
+rt.diffs = d25 %>% group_by(sub,condition) %>%  summarise(rtmean = mean(rt))
+rt.diffs = rt.diffs %>%  filter(sub != "8", condition != "random")
+rt.diffs = rt.diffs %>% spread(condition,rtmean)
+rt.diffs =  rt.diffs %>% mutate(rtdiff = scrambled - intact)
+rt.diffs = data.frame(rt.diffs)

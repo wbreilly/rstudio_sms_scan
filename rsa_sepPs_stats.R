@@ -20,6 +20,9 @@ rsa$position = as.factor(rsa$position)
 # rsa =read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/RSAmeans_SVSS_11_3_17.txt", header = TRUE, stringsAsFactors = TRUE)
 
 
+# filter out bad subs
+rsa = rsa %>% filter(sub != "s008") #sub != "s016")
+
 
 
 rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity))
@@ -74,53 +77,72 @@ rsa.PMAT = rsa %>% filter(roi_group != "Other")
 # plot by cluster
 clusters.rois = ggplot(data = rsa.PMAT, aes(x = factor(condition), y = similarity))  + geom_boxplot() + geom_point(aes(colour = factor(sub))) +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.2, .6))
 clusters.rois
+clusters.rois = ggplot(data = rsa.PMAT, aes(x = factor(condition), y = similarity))  + geom_boxplot() + facet_wrap( ~roi_group) #+ scale_y_continuous(limits = c(-.2, .6))
+clusters.rois
 
 ##########################
 # stats
 # looking for main effect so only intact and scrambled
-rsa.main = rsa.PMAT %>% filter(condition != "random")
+rsa.main = rsa.PMAT %>% filter(condition != "scrambled")
 # with all 3 conditions
 m1 = aov_ez("sub", "similarity", rsa.PMAT, within = c("condition", "roi_group"))
 m1
-# just intact and scrambled
-m2 = aov_ez("sub", "similarity", rsa.PMAT, within = c("condition", "roi_group"))
-m2
 
-# for sig 3-way I had only intact and scrambled in anlysis.... but might have 
-
-# looking for main effect so only intact and scrambled
-# rsa.main = rsa %>% filter(condition != "random")
 # split df's by roi_group
-rsa.PM = rsa.main %>% filter(roi_group == "PM")
-rsa.AT = rsa.main %>% filter(roi_group == "AT")
-rsa.HIPP = rsa.main %>% filter(roi_group == "HIPP")
+# rsa.PM = rsa.main %>% filter(roi_group == "PM")
+# rsa.AT = rsa.main %>% filter(roi_group == "AT")
+# rsa.HIPP = rsa.main %>% filter(roi_group == "HIPP")
+# split df's by roi_group
+# rsa.PM = rsa %>% filter(roi_group == "PM")
+# rsa.AT = rsa %>% filter(roi_group == "AT")
+# rsa.HIPP = rsa %>% filter(roi_group == "HIPP")
 #
 # look at all conditions in HIPP
-RSA.HIPP.allconds = rsa.PMAT %>% filter(roi_group == "HIPP")
+# RSA.HIPP.allconds = rsa.PMAT %>% filter(roi_group == "HIPP")
 # pairwise ttests
 # sample code
 # pairwise.t.test(rsa.AT$similarity,rsa.PM$condition, p.adjust.method = "bonferroni")
 
-#  anova.. but this is doing same as paired ttest 
-m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition", "roi")) # , "position"))
+#  anova
+m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition", "roi","position")) # , "position"))
 m1.PM
-m1.AT = aov_ez("sub", "similarity", rsa.AT, within = c("condition", "roi"))#, "position"))
+m1.AT = aov_ez("sub", "similarity", rsa.AT, within = c("condition", "roi", "position"))#, "position"))
 m1.AT
-m1.HIPP = aov_ez("sub", "similarity", rsa.HIPP, within = c("condition","roi")) #, "position"))
+m1.HIPP = aov_ez("sub", "similarity", rsa.HIPP, within = c("condition","roi", "position")) #, "position"))
 m1.HIPP
 
 #contrasts aren't valid with position in model
-# ls.HIPP = lsmeans(m1.HIPP,~ roi:condition,contr = "pairwise", adjust = NULL)
-# ls.HIPP
-# pairs(ls.HIPP,adjust = "bonferroni")
+ls.HIPP = lsmeans(m1.HIPP,~ roi:condition,contr = "pairwise", adjust = NULL)
+ls.HIPP
+pairs(ls.HIPP,adjust = "bonferroni")
 # c1 = list(c(1, 0, 0, 0, -1, 0, 0, 0))
 # contrast(ls.HIPP,c1, adjust = "bonferroni")
 # c2 = list(c(0, 1, 0, 0, 0, -1, 0, 0))
 # contrast(ls.HIPP,c1)
 
+###################
+# AT by position
+# look in left AT 
+# left  only 
+# rsa.AT.left = rsa.AT %>% filter(roi != "rh-prc", roi != "rh-TPole")
+rsa.AT.left = rsa.AT %>% filter(roi == "lh-TPole")
+m1.AT = aov_ez("sub", "similarity", rsa.AT.left, within = c("condition","position"))
+m1.AT
+ls.AT = lsmeans(m1.AT,~condition:position,contr = "pairwise", adjust = NULL)
+ls.AT
+c1 = list(con.p1 = c(1, -1 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0),
+          con.p2 = c(0, 0 ,1 ,-1 ,0 ,0 ,0 ,0 ,0 , 0),
+          con.p3 = c(0,0,0,0,1,-1,0,0,0,0),
+          con.p4 = c(0,0,0,0,0,0,1,-1,0,0),
+          con.p5 = c(0,0,0,0,0,0,0,0,1,-1))
+contrast(ls.AT, c1, adjust= "holm")
+
+
+
+#############
 # ls.AT = lsmeans(m1.AT,~ roi:condition,contr = "pairwise", adjust = NULL)
 # ls.AT
-# # left t pole contrast
+# # # left t pole contrast
 # c1 = list(c(1, 0, 1, 0, -1, 0, -1, 0))
 # contrast(ls.AT,c1)
 # # right t pole contrast
@@ -128,27 +150,44 @@ m1.HIPP
 # contrast(ls.AT,c1)
 # 
 # # lsmeans approach to difference means
-m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition","roi" ))
+# prec by position?
+# if only 
+rsa.PM = rsa.PM %>% filter(roi == "lh-Prec")
+m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition","position" ))
 m1.PM
-ls.PM = lsmeans(m1.PM,~ roi:condition,contr = "pairwise", adjust = NULL)
+ls.PM = lsmeans(m1.PM,~condition:position,contr = "pairwise", adjust = NULL)
 ls.PM
+pairs(ls.PM,adjust = "bonferroni")
+# do all position between two conditions contrast
+c1 = list(con.p1 = c(1, -1 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0),
+          con.p2 = c(0, 0 ,1 ,-1 ,0 ,0 ,0 ,0 ,0 , 0),
+          con.p3 = c(0,0,0,0,1,-1,0,0,0,0),
+          con.p4 = c(0,0,0,0,0,0,1,-1,0,0),
+          con.p5 = c(0,0,0,0,0,0,0,0,1,-1))
+
+# c1 = list(con.p1p2 = c(1/2, -1/2, 1/2 ,-1/2, 0 ,0, 0, 0, 0, 0 ),
+#           con.p1 = c(1,-1,0,0,0,0,0,0,0,0),
+#           con.p2 = c(0,-0,1,-1,0,0,0,0,0,0),
+#           con.p4p5 = c(0,0,0,0,0,0,1/2,-1/2,1/2,-1/2))
 # scrambled > intact at every region
-c1 = list(all = c(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1 ),
-          prec_pcc = c(0, 0, 0, 1/4, 1/4, 0, 0, 1/4, 1/4, 0, 0, 0, 0, -1/4, -1/4, 0, 0, -1/4, -1/4, 0))
-contrast(ls.PM,c1) #,adjust = "bonferroni")
-# right t pole contrast
-c1 = list(c(0, 0, 0, 1, 0, 0, 0,-1))
-contrast(ls.AT,c1)
+# c1 = list(all = c(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1 ),
+#           prec_pcc = c(0, 0, 0, 1/4, 1/4, 0, 0, 1/4, 1/4, 0, 0, 0, 0, -1/4, -1/4, 0, 0, -1/4, -1/4, 0))
+contrast(ls.PM,c1 ,adjust = "holm")
+# # right t pole contrast
+# c1 = list(c(0, 0, 0, 1, 0, 0, 0,-1))
+# contrast(ls.AT,c1)
 
 ###########################################
 # Plot PM by region
-# plot by cluster + geom_line(group =1)
-PM.plot = ggplot(data = rsa.PM, aes(x = factor(position), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~condition, ncol = 5) + scale_y_continuous(limits = c(-.2, .6))
+# plot by cluster + geom_line(group =1) # + geom_point(aes(colour = factor(sub)))
+rsa.PM = rsa.main %>% filter(roi_group == "PM")
+
+PM.plot = ggplot(data = rsa.PM, aes(x = factor(position), y = similarity)) + geom_boxplot()   + facet_wrap(condition~roi) + scale_y_continuous(limits = c(-.2, .6))
 PM.plot
 
 # Plot AT by region
 # plot by cluster + geom_line(group =1)
-AT.plot = ggplot(data = rsa.AT, aes(x = factor(position), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~condition, ncol = 2) + scale_y_continuous(limits = c(-.2, .6))
+AT.plot = ggplot(data = rsa.AT, aes(x = factor(position), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(roi~condition) + scale_y_continuous(limits = c(-.2, .6))
 AT.plot
 
 # Plot HIPP by region
@@ -232,16 +271,16 @@ p.3way
 # plot differences between intact and scrambled across positions
 # PM regions
 # lsmeans approach to difference means
-m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition", "position"))
-m1.PM
-ls.PM = lsmeans(m1.PM,~ position:condition,contr = "pairwise", adjust = NULL)
-ls.PM = data.frame(summary(ls.PM))
-sumstats.pos.plot = ls.PM %>% spread(condition, lsmean ) 
-sumstats.pos.plot =  sumstats.pos.plot %>% group_by(position) %>% mutate(diff = scrambled - intact)
-diffs = sumstats.pos.plot[is.na(sumstats.pos.plot$intact),]
-diffs = data.frame(diffs)
-diffs$intact = sumstats.pos.plot[!is.na(sumstats.pos.plot$intact),6]
-diffs$diffs =  diffs$scrambled - diffs$intact
+# m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition", "position"))
+# m1.PM
+# ls.PM = lsmeans(m1.PM,~ position:condition,contr = "pairwise", adjust = NULL)
+# ls.PM = data.frame(summary(ls.PM))
+# sumstats.pos.plot = ls.PM %>% spread(condition, lsmean ) 
+# sumstats.pos.plot =  sumstats.pos.plot %>% group_by(position) %>% mutate(diff = scrambled - intact)
+# diffs = sumstats.pos.plot[is.na(sumstats.pos.plot$intact),]
+# diffs = data.frame(diffs)
+# diffs$intact = sumstats.pos.plot[!is.na(sumstats.pos.plot$intact),6]
+# diffs$diffs =  diffs$scrambled - diffs$intact
 # ok i could plot that, but SE is all the same
 
 ##########################################
@@ -281,7 +320,7 @@ diffs.PM = diffs.PM + geom_bar(stat = "identity",
 diffs.PM
 
 # Hipp diffs
-sumstats.pos.plot = y %>% group_by(sub, condition, position) %>% summarise(simmean = mean(similarity))
+sumstats.pos.plot = rsa.HIPP.body %>% group_by(sub, condition, position) %>% summarise(simmean = mean(similarity))
 sumstats.pos.plot = sumstats.pos.plot %>% spread(condition, simmean) 
 sumstats.pos.plot = sumstats.pos.plot %>% mutate(diffs = scrambled - intact)
 sumstats.pos.plot = sumstats.pos.plot %>% group_by(position) %>% summarise(diffmean = mean(diffs), sddiff = sd(diffs))
