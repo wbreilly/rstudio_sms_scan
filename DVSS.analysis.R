@@ -101,6 +101,7 @@ m1.HIPP
 ###############
 # make some 5x5s
 # split by condition and pm group
+
 #PM intact
 rsa.PM.intact = rsa.PM %>%  filter(condition == "intact")
 mtx.stats.pm = rsa.PM.intact %>% group_by(condition,mtx, roi) %>% summarise(meansim = mean(similarity))
@@ -110,12 +111,26 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,10),rep(1,10),rep(1,10),rep(1,10),rep(1,10),rep(2,10),rep(2,10),rep(2,10),rep(2,10),rep(3,10),rep(3,10),rep(3,10),rep(4,10),rep(4,10),rep(5,10))
 mtx.stats.pm$y = c(rep(5,10),rep(4,10),rep(3,10),rep(2,10),rep(1,10),rep(4,10),rep(3,10),rep(2,10),rep(1,10),rep(3,10),rep(2,10),rep(1,10),rep(2,10),rep(1,10),rep(1,10))
 
-# mtx.stats.pm = mtx.stats.pm %>%  filter(roi == "lh-Prec" | "rh-Prec")
-
+mtx.stats.pm  = mtx.stats.pm %>%  filter(roi == "lh-Prec" )
+# limits = (c(.1,.33)))  # for lh-prec
 mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(0,.35))) + facet_wrap(~ roi,ncol = 5) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
-
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(.13,.33)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      legend.position="none",
+                                      # legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank()) 
+mtx.PM.intact
+ggsave("DVSS_intact_lprec.eps", plot = last_plot(), dpi = 600)
 
 # random
 rsa.PM.random = rsa.PM %>%  filter(condition == "random")
@@ -130,9 +145,27 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,10),rep(1,10),rep(1,10),rep(1,10),rep(1,10),rep(2,10),rep(2,10),rep(2,10),rep(2,10),rep(3,10),rep(3,10),rep(3,10),rep(4,10),rep(4,10),rep(5,10))
 mtx.stats.pm$y = c(rep(5,10),rep(4,10),rep(3,10),rep(2,10),rep(1,10),rep(4,10),rep(3,10),rep(2,10),rep(1,10),rep(3,10),rep(2,10),rep(1,10),rep(2,10),rep(1,10),rep(1,10))
 
+mtx.stats.pm  = mtx.stats.pm %>%  filter(roi == "lh-Prec" )
+
 mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(0,.35))) + facet_wrap(~ roi,ncol = 5) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(.1,.33)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      legend.position="none",
+                                      # legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank()) 
+mtx.PM.intact
+ggsave("DVSS_random_lprec.eps", plot = last_plot(), dpi = 600 )
+
 
 # scrambled
 rsa.PM.scrambled = rsa.PM %>%  filter(condition == "scrambled")
@@ -147,10 +180,29 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,10),rep(1,10),rep(1,10),rep(1,10),rep(1,10),rep(2,10),rep(2,10),rep(2,10),rep(2,10),rep(3,10),rep(3,10),rep(3,10),rep(4,10),rep(4,10),rep(5,10))
 mtx.stats.pm$y = c(rep(5,10),rep(4,10),rep(3,10),rep(2,10),rep(1,10),rep(4,10),rep(3,10),rep(2,10),rep(1,10),rep(3,10),rep(2,10),rep(1,10),rep(2,10),rep(1,10),rep(1,10))
 
-mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(0,.35))) + facet_wrap(~ roi,ncol = 5) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
-
+mtx.stats.pm  = mtx.stats.pm %>%  filter(roi == "lh-Prec" )
+# mtx.stats.pm  = mtx.stats.pm %>%  filter(roi == "rh-phc-ant" )
+# + facet_wrap(~ roi,ncol = 5)
+mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) +
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(.13,.33)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      # legend.position="none",
+                                      legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank(),legend.position = c(0.75, 0.8),
+                                      text = element_text(size = 24, face = "bold"))
+mtx.PM.intact
+ggsave("DVSS_scrambled_lprec.eps", plot = last_plot(), dpi = 600 )
+library(viridis)
 ####################
 # AT 
 #AT intact
@@ -160,9 +212,30 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(2,4),rep(2,4),rep(2,4),rep(2,4),rep(3,4),rep(3,4),rep(3,4),rep(4,4),rep(4,4),rep(5,4))
 mtx.stats.pm$y = c(rep(5,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(3,4),rep(2,4),rep(1,4),rep(2,4),rep(1,4),rep(1,4))
 
-mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.05,.15))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
+# mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
+#   geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.05,.15))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+# mtx.PM.intact 
+mtx.stats.pm  = mtx.stats.pm %>%  filter(roi == "lh-prc")
+
+# + facet_wrap(~ roi,ncol = 5)
+mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) +
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(-.06,.15)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      legend.position="none",
+                                      # legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank())
+mtx.PM.intact
+ggsave("DVSS_intact_lprc.eps", plot = last_plot(), dpi = 600 )
 # 
 
 # random
@@ -178,9 +251,31 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(2,4),rep(2,4),rep(2,4),rep(2,4),rep(3,4),rep(3,4),rep(3,4),rep(4,4),rep(4,4),rep(5,4))
 mtx.stats.pm$y = c(rep(5,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(3,4),rep(2,4),rep(1,4),rep(2,4),rep(1,4),rep(1,4))
 
-mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.05,.15))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
+# mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
+#   geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.05,.15))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+# mtx.PM.intact 
+
+mtx.stats.pm  = mtx.stats.pm %>%  filter(roi == "lh-prc")
+
+# + facet_wrap(~ roi,ncol = 5)
+mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) +
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(-.06,.15)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      legend.position="none",
+                                      # legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank())
+mtx.PM.intact
+ggsave("DVSS_random_lprc.eps", plot = last_plot(), dpi = 600 )
 
 # scrambled
 rsa.AT.scrambled = rsa.AT %>%  filter(condition == "scrambled")
@@ -195,9 +290,32 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(2,4),rep(2,4),rep(2,4),rep(2,4),rep(3,4),rep(3,4),rep(3,4),rep(4,4),rep(4,4),rep(5,4))
 mtx.stats.pm$y = c(rep(5,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(3,4),rep(2,4),rep(1,4),rep(2,4),rep(1,4),rep(1,4))
 
-mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.05,.15))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
+# mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
+#   geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.05,.15))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+# mtx.PM.intact 
+mtx.stats.pm  = mtx.stats.pm %>%  filter(roi == "lh-prc")
+
+# + facet_wrap(~ roi,ncol = 5)
+mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) +
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(-.06,.15)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      # legend.position="none",
+                                      legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank(),
+                                      legend.position = c(0.75, 0.8),
+                                      text = element_text(size = 24, face = "bold"))
+mtx.PM.intact
+ggsave("DVSS_scrambled_lprc.eps", plot = last_plot(), dpi = 600 )
 
 ####################
 # HIPP
@@ -208,19 +326,33 @@ mtx.stats.pm = rsa.HIPP.intact %>% group_by(condition,mtx,roi) %>% summarise(mea
 mtx.stats.pm = data.frame(mtx.stats.pm)
 # mtx.stats.pm$x = c(1,1,1,1,1,2,2,2,2,3,3,3,4,4,5)
 # mtx.stats.pm$y = c(5,4,3,2,1,4,3,2,1,3,2,1,2,1,1)
-# 
-# mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-#   geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.02,.06))) #+ facet_wrap(~ day) 
-# mtx.PM.intact 
+
 mtx.stats.pm$x = c(rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(2,4),rep(2,4),rep(2,4),rep(2,4),rep(3,4),rep(3,4),rep(3,4),rep(4,4),rep(4,4),rep(5,4))
 mtx.stats.pm$y = c(rep(5,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(3,4),rep(2,4),rep(1,4),rep(2,4),rep(1,4),rep(1,4))
 
-mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.04,.06))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
-# 
+mtx.stats.pm = mtx.stats.pm %>% filter(roi == "rh-hipp-body")
 
-# random
+mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(-.03,.05)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      legend.position="none",
+                                      legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank(),
+                                      text = element_text(size = 24, face = "bold"))
+mtx.PM.intact
+ggsave("DVSS_intact_rhbody.eps", plot = last_plot(), dpi = 600 )
+
+########## random
 # rsa.HIPP.random = rsa.HIPP.body %>%  filter(condition == "random")
 rsa.HIPP.random = rsa.HIPP %>%  filter(condition == "random")
 mtx.stats.pm = rsa.HIPP.random %>% group_by(condition,mtx,roi) %>% summarise(meansim = mean(similarity))
@@ -234,9 +366,31 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(2,4),rep(2,4),rep(2,4),rep(2,4),rep(3,4),rep(3,4),rep(3,4),rep(4,4),rep(4,4),rep(5,4))
 mtx.stats.pm$y = c(rep(5,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(3,4),rep(2,4),rep(1,4),rep(2,4),rep(1,4),rep(1,4))
 
+# mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
+#   geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.01,.06))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+# mtx.PM.intact 
+
+mtx.stats.pm = mtx.stats.pm %>% filter(roi == "rh-hipp-body")
+
 mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.04,.06))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(-.03,.05)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      legend.position="none",
+                                      legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank(),
+                                      text = element_text(size = 24, face = "bold"))
+mtx.PM.intact
+ggsave("DVSS_random_rhbody.eps", plot = last_plot(), dpi = 600 )
 
 # scrambled
 # rsa.HIPP.scrambled = rsa.HIPP.body %>%  filter(condition == "scrambled")
@@ -252,11 +406,31 @@ mtx.stats.pm = data.frame(mtx.stats.pm)
 mtx.stats.pm$x = c(rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(1,4),rep(2,4),rep(2,4),rep(2,4),rep(2,4),rep(3,4),rep(3,4),rep(3,4),rep(4,4),rep(4,4),rep(5,4))
 mtx.stats.pm$y = c(rep(5,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(4,4),rep(3,4),rep(2,4),rep(1,4),rep(3,4),rep(2,4),rep(1,4),rep(2,4),rep(1,4),rep(1,4))
 
+mtx.stats.pm = mtx.stats.pm %>% filter(roi == "rh-hipp-body")
+
 mtx.PM.intact = ggplot(mtx.stats.pm, aes(x = x, y = y, fill = meansim)) + 
-  geom_tile() + scale_fill_viridis(na.value = "transparent",limits = (c(-.04,.06))) + facet_wrap(~ roi,ncol =2) + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
-mtx.PM.intact 
+  geom_tile() + scale_fill_viridis(na.value = "transparent",option = "inferno",limits = (c(-.03,.05)))  + theme(axis.text.y = element_blank(), axis.text.x = element_blank())
+mtx.PM.intact = mtx.PM.intact + theme(axis.line=element_blank(),
+                                      axis.text.x=element_blank(),
+                                      axis.text.y=element_blank(),
+                                      axis.ticks=element_blank(),
+                                      axis.title.x=element_blank(),
+                                      axis.title.y=element_blank(),
+                                      # legend.position="none",
+                                      legend.title = element_blank(),
+                                      panel.background=element_blank(),
+                                      panel.border=element_blank(),
+                                      panel.grid.major=element_blank(),
+                                      panel.grid.minor=element_blank(),
+                                      plot.background=element_blank(),
+                                      plot.title = element_blank(),
+                                      text = element_text(size = 36, face = "bold"),
+                                      legend.position = c(0.75, 0.8))
+mtx.PM.intact
+ggsave("DVSS_scrambled_rhbody.eps", plot = last_plot(), dpi = 600 )
 
 ##############################################
+
 #  VMPFC comin to da r
 rsa.VMPFC= rsa %>%  filter(roi == "rh-occ-pole", condition == "intact")
 mtx.stats.pm = rsa.VMPFC %>% group_by(condition,mtx) %>% summarise(meansim = mean(similarity))

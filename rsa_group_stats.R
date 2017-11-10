@@ -104,20 +104,28 @@ m1.HIPP
 
 ###########################################
 # Plot PM by region
-# plot by cluster + geom_line(group =1)
-PM.plot = ggplot(data = rsa.PM, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi,ncol = 5)
+# plot by cluster + geom_line(group =1) #  + geom_point(aes(colour = factor(sub))) 
+PM.plot = ggplot(data = rsa.PM, aes(x = factor(condition), y = similarity)) + geom_boxplot() + facet_wrap(~roi,ncol = 5)
+PM.plot = PM.plot + coord_cartesian(ylim=c(550,1150)) 
 PM.plot
 
 # Plot PM by region
-# plot by cluster + geom_line(group =1)
-AT.plot = ggplot(data = rsa.AT, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2)
+# plot by cluster + geom_line(group =1) # + geom_point(aes(colour = factor(sub)))  
+rsa.AT = rsa.AT %>% filter(roi != "rh-TPole", roi != "rh-prc")
+AT.plot = ggplot(data = rsa.AT, aes(x = factor(condition), y = similarity, fill = condition)) + geom_boxplot() + facet_wrap(~roi, ncol = 2)
+AT.plot = AT.plot + coord_cartesian(ylim=c(-.075,.15)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
+AT.plot = AT.plot + labs(x = NULL) + scale_fill_brewer(palette= "Dark2")  + theme(strip.background = element_blank(),strip.text= element_blank(),axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())
 AT.plot
+ggsave("left_AT_SVSS.eps", plot = last_plot(), dpi = 600 )
 
 # Plot PM by region
-# plot by cluster + geom_line(group =1)
-HIPP.plot = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2)
+# plot by cluster + geom_line(group =1) # + geom_point(aes(colour = factor(sub))) 
+rsa.HIPP = rsa.HIPP %>% filter(roi != "lh-hipp-head", roi != "rh-hipp-head")
+HIPP.plot = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity, fill = condition)) + geom_boxplot()  + facet_wrap(~roi, ncol = 2)
+HIPP.plot = HIPP.plot + coord_cartesian(ylim=c(-.1,.11)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
+HIPP.plot = HIPP.plot + labs(x = NULL) + scale_fill_brewer(palette= "Dark2")  + theme(strip.background = element_blank(),strip.text= element_blank(),axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())
 HIPP.plot
-
+ggsave("hipp_body_SVSS.eps", plot = last_plot(), dpi = 600 )
 ##########################
 # throwing RANDOM back in the mix
 # HIPP.plot.allconds = ggplot(data = RSA.HIPP.allconds, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2)
@@ -170,16 +178,16 @@ rsa.diff.ps = data.frame(rsa.diff.ps)
 rsa.diff.PM = rsa.diff.ps %>% filter(roi_group == "PM")
 rsa.diff.AT = rsa.diff.ps %>% filter(roi_group == "AT")
 rsa.diff.HIPP = rsa.diff.ps %>% filter(roi_group == "HIPP")
-rsa.diff.other = rsa.diff.ps %>% filter(roi_group == "Other")
+# rsa.diff.other = rsa.diff.ps %>% filter(roi_group == "Other")
 
 # could also grab the data from the retrieval script in rtdiffs$rtdiff
-# rsa.diff.PM$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.AT$rtdiffs =  c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.HIPP$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-rsa.diff.PM$rtdiffs = rt.diffs$rtdiff
-rsa.diff.HIPP$rtdiffs = rt.diffs$rtdiff
-rsa.diff.AT$rtdiffs = rt.diffs$rtdiff
-rsa.diff.other$rtdiffs = rt.diffs$rtdiff
+rsa.diff.PM$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
+rsa.diff.AT$rtdiffs =  c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
+rsa.diff.HIPP$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
+# rsa.diff.PM$rtdiffs = rt.diffs$rtdiff
+# rsa.diff.HIPP$rtdiffs = rt.diffs$rtdiff
+# rsa.diff.AT$rtdiffs = rt.diffs$rtdiff
+# rsa.diff.other$rtdiffs = rt.diffs$rtdiff
 
 cor.test(rsa.diff.PM$rtdiffs,rsa.diff.PM$psdiffs)
 cor.test(rsa.diff.AT$rtdiffs,rsa.diff.AT$psdiffs)
@@ -187,7 +195,48 @@ cor.test(rsa.diff.HIPP$rtdiffs,rsa.diff.HIPP$psdiffs)
 cor.test(rsa.diff.other$rtdiffs,rsa.diff.other$psdiffs)
 
 # positive rt means faster on intact than scrambled 
+# positive ps means higher ps for intact 
 
-corr.plot = ggplot(data = rsa.diff.PM,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(aes(colour = factor(sub))) +   geom_smooth(method='lm')
-corr.plot = corr.plot + ggtitle("r = 0.62, p-value = 0.03")
-corr.plot
+corr.plot = ggplot(data = rsa.diff.PM,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 5) +   geom_smooth(method='lm')
+corr.plot = corr.plot + ggtitle("r = 0.51, p = 0.09")  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
+corr.plot = corr.plot + theme(text = element_text(size = 30, face = "bold"))
+corr.plot.phc = corr.plot
+corr.plot.phc 
+ggsave("phc_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+
+####################
+# hipp body 
+rsa.diff.ps = rsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "HIPP", roi != "rh-hipp-head",roi != "lh-hipp-head", condition != "random") %>% summarise(simmean = mean(similarity))
+# rsa.diff.ps = rsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group != "Other", condition != "scrambled") %>%  summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+# rsa.diff.VMPFC = rsa.diff.ps
+
+# split by roi group
+rsa.diff.PM = rsa.diff.ps %>% filter(roi_group == "PM")
+rsa.diff.AT = rsa.diff.ps %>% filter(roi_group == "AT")
+rsa.diff.HIPP = rsa.diff.ps %>% filter(roi_group == "HIPP")
+# rsa.diff.other = rsa.diff.ps %>% filter(roi_group == "Other")
+
+# could also grab the data from the retrieval script in rtdiffs$rtdiff
+rsa.diff.PM$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
+rsa.diff.AT$rtdiffs =  c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
+rsa.diff.HIPP$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
+# rsa.diff.PM$rtdiffs = rt.diffs$rtdiff
+# rsa.diff.HIPP$rtdiffs = rt.diffs$rtdiff
+# rsa.diff.AT$rtdiffs = rt.diffs$rtdiff
+# rsa.diff.other$rtdiffs = rt.diffs$rtdiff
+
+cor.test(rsa.diff.PM$rtdiffs,rsa.diff.PM$psdiffs)
+cor.test(rsa.diff.AT$rtdiffs,rsa.diff.AT$psdiffs)
+cor.test(rsa.diff.HIPP$rtdiffs,rsa.diff.HIPP$psdiffs)
+cor.test(rsa.diff.other$rtdiffs,rsa.diff.other$psdiffs)
+
+# plot
+corr.plot = ggplot(data = rsa.diff.HIPP,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 5) +   geom_smooth(method='lm')
+corr.plot = corr.plot + ggtitle("r = 0.62, p = 0.03")  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
+corr.plot = corr.plot + theme(text = element_text(size = 30, face = "bold"))
+corr.plot.hipp = corr.plot
+corr.plot.hipp
+ggsave("hipp_body_diff_corr.pdf", plot = last_plot(), dpi = 600 )
