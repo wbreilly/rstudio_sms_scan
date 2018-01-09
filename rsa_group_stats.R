@@ -111,7 +111,12 @@ PM.plot
 
 # Plot PM by region
 # plot by cluster + geom_line(group =1) # + geom_point(aes(colour = factor(sub)))  
+rsa.AT = rsa %>% filter(roi_group == "AT")
 rsa.AT = rsa.AT %>% filter(roi != "rh-TPole", roi != "rh-prc")
+val = c(1,2,3)
+rsa.AT$condition = factor(rsa.AT$condition, levels = rsa.AT$condition[order(val)])
+levels(rsa.AT$condition)
+rsa.AT$condition = as.factor(rsa.AT$condtion)
 AT.plot = ggplot(data = rsa.AT, aes(x = factor(condition), y = similarity, fill = condition)) + geom_boxplot() + facet_wrap(~roi, ncol = 2)
 AT.plot = AT.plot + coord_cartesian(ylim=c(-.075,.15)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
 AT.plot = AT.plot + labs(x = NULL) + scale_fill_brewer(palette= "Dark2")  + theme(strip.background = element_blank(),strip.text= element_blank(),axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())
@@ -121,6 +126,10 @@ ggsave("left_AT_SVSS.eps", plot = last_plot(), dpi = 600 )
 # Plot PM by region
 # plot by cluster + geom_line(group =1) # + geom_point(aes(colour = factor(sub))) 
 rsa.HIPP = rsa.HIPP %>% filter(roi != "lh-hipp-head", roi != "rh-hipp-head")
+val = c(1,2,3)
+rsa.HIPP$condition = factor(rsa.HIPP$condition, levels = rsa.HIPP$condition[order(val)])
+levels(rsa.HIPP$condition)
+rsa.HIPP$condition = as.factor(rsa.HIPP$condtion)
 HIPP.plot = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity, fill = condition)) + geom_boxplot()  + facet_wrap(~roi, ncol = 2)
 HIPP.plot = HIPP.plot + coord_cartesian(ylim=c(-.1,.11)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
 HIPP.plot = HIPP.plot + labs(x = NULL) + scale_fill_brewer(palette= "Dark2")  + theme(strip.background = element_blank(),strip.text= element_blank(),axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())
