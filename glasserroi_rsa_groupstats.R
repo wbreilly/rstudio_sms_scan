@@ -21,40 +21,40 @@ for (ipage in 1:36) {
   fname = sprintf("glasserroi_page_%d.pdf", ipage) 
   ggsave(fname)
 }
-
-# the rois
-PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
-AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole'	)
-HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R')
-PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
-                 'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
-vmpfc = c('near-VMPFC') 
-
-# make networks factor
-# first make logical vectors for member regions
-rsa$PM = rsa$roi %in% PM_rois
-rsa$AT = rsa$roi %in% AT_rois
-rsa$HIPP = rsa$roi %in% HIPP_rois
-rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
-
-# now assign group label in single column
-rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
-# delete the logical vectors
-# rsa[,6:9] = NULL
-rsa[,5:8] = NULL
-# make group a factor
-rsa$roi_group = as.factor(rsa$roi_group)
-
-# wish I did this earlier but hindsight yada yada
-rsa$roi = gsub(".*body-L$", "lh-hipp-body", rsa$roi)
-rsa$roi = gsub(".*body-R$", "rh-hipp-body", rsa$roi)
-rsa$roi = gsub(".*head-L$", "lh-hipp-head", rsa$roi)
-rsa$roi = gsub(".*head-R$", "rh-hipp-head", rsa$roi)
-rsa$roi = gsub(".*ant-L$", "lh-phc-ant", rsa$roi)
-rsa$roi = gsub(".*ant-R$", "rh-phc-ant", rsa$roi)
-rsa$roi = gsub(".*VMPFC", "VMPFC", rsa$roi)
-rsa$roi = gsub(".*prc-L$", "lh-prc", rsa$roi)
-rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
+# 
+# # the rois
+# PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+# AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole'	)
+# HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R')
+# PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
+#                  'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+# vmpfc = c('near-VMPFC') 
+# 
+# # make networks factor
+# # first make logical vectors for member regions
+# rsa$PM = rsa$roi %in% PM_rois
+# rsa$AT = rsa$roi %in% AT_rois
+# rsa$HIPP = rsa$roi %in% HIPP_rois
+# rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
+# 
+# # now assign group label in single column
+# rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
+# # delete the logical vectors
+# # rsa[,6:9] = NULL
+# rsa[,5:8] = NULL
+# # make group a factor
+# rsa$roi_group = as.factor(rsa$roi_group)
+# 
+# # wish I did this earlier but hindsight yada yada
+# rsa$roi = gsub(".*body-L$", "lh-hipp-body", rsa$roi)
+# rsa$roi = gsub(".*body-R$", "rh-hipp-body", rsa$roi)
+# rsa$roi = gsub(".*head-L$", "lh-hipp-head", rsa$roi)
+# rsa$roi = gsub(".*head-R$", "rh-hipp-head", rsa$roi)
+# rsa$roi = gsub(".*ant-L$", "lh-phc-ant", rsa$roi)
+# rsa$roi = gsub(".*ant-R$", "rh-phc-ant", rsa$roi)
+# rsa$roi = gsub(".*VMPFC", "VMPFC", rsa$roi)
+# rsa$roi = gsub(".*prc-L$", "lh-prc", rsa$roi)
+# rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
 ########################
 # PMAT AT and HIPP only
 rsa.PMAT = rsa %>% filter(roi_group != "Other")
@@ -87,7 +87,7 @@ rsa.HIPP = rsa %>% filter(roi_group == "HIPP")
 # pairwise.t.test(rsa.AT$similarity,rsa.PM$condition, p.adjust.method = "bonferroni")
 
 #  anova.. but this is doing same as paired ttest 
-m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition", "roi"))
+m1.PM = aov_ez("sub", "similarity", rsa, within = c("condition")) # , "roi"
 m1.PM
 m1.AT = aov_ez("sub", "similarity", rsa.AT, within = c("condition", "roi"))
 m1.AT

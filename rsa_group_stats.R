@@ -3,7 +3,7 @@ library(tidyverse)
 library(afex)
 
 # SVSS without positions and 1.1 threshold
-rsa =read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/RSAmeans_SVSS_1.1thresh_11_5_17.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa =read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVSS_p1p2p3p4p5_pears_1.15betathresh_3_2_18.txt", header = TRUE, stringsAsFactors = TRUE)
 
 # back to pearsons but stricted beta scrub threshold. some subjects have closer to 15 excluded although some still only a couple
 # rsa =read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/RSAmeans_SVSS_p1p2p3p4p5_pears_1.1betathresh_11_4_17.txt", header = TRUE, stringsAsFactors = TRUE)
@@ -47,8 +47,8 @@ rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
 # now assign group label in single column
 rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
  # delete the logical vectors
-# rsa[,6:9] = NULL
-rsa[,5:8] = NULL
+rsa[,6:9] = NULL
+# rsa[,5:8] = NULL
 # make group a factor
 rsa$roi_group = as.factor(rsa$roi_group)
 
@@ -66,8 +66,8 @@ rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
 # PMAT AT and HIPP only
 rsa.PMAT = rsa %>% filter(roi_group != "Other")
 
-# plot by cluster
-clusters.rois = ggplot(data = rsa.PMAT, aes(x = factor(condition), y = similarity))  + geom_boxplot() + geom_point(aes(colour = factor(sub))) +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.2, .6))
+# plot by cluster # + geom_point(aes(colour = factor(sub)))
+clusters.rois = ggplot(data = rsa.PMAT, aes(x = factor(condition), y = similarity))  + geom_boxplot()  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.2, .6))
 clusters.rois
 
 ##########################
@@ -106,22 +106,22 @@ m1.HIPP
 # Plot PM by region
 # plot by cluster + geom_line(group =1) #  + geom_point(aes(colour = factor(sub))) 
 PM.plot = ggplot(data = rsa.PM, aes(x = factor(condition), y = similarity)) + geom_boxplot() + facet_wrap(~roi,ncol = 5)
-PM.plot = PM.plot + coord_cartesian(ylim=c(550,1150)) 
+# PM.plot = PM.plot + coord_cartesian(ylim=c(550,1150)) 
 PM.plot
 
 # Plot PM by region
 # plot by cluster + geom_line(group =1) # + geom_point(aes(colour = factor(sub)))  
 rsa.AT = rsa %>% filter(roi_group == "AT")
-rsa.AT = rsa.AT %>% filter(roi != "rh-TPole", roi != "rh-prc")
+# rsa.AT = rsa.AT %>% filter(roi != "rh-TPole", roi != "rh-prc")
 val = c(1,2,3)
 rsa.AT$condition = factor(rsa.AT$condition, levels = rsa.AT$condition[order(val)])
 levels(rsa.AT$condition)
 rsa.AT$condition = as.factor(rsa.AT$condtion)
 AT.plot = ggplot(data = rsa.AT, aes(x = factor(condition), y = similarity, fill = condition)) + geom_boxplot() + facet_wrap(~roi, ncol = 2)
-AT.plot = AT.plot + coord_cartesian(ylim=c(-.075,.15)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
+AT.plot = AT.plot + coord_cartesian(ylim=c(-.5,.5)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
 AT.plot = AT.plot + labs(x = NULL) + scale_fill_brewer(palette= "Dark2")  + theme(strip.background = element_blank(),strip.text= element_blank(),axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())
 AT.plot
-ggsave("left_AT_SVSS.eps", plot = last_plot(), dpi = 600 )
+# ggsave("left_AT_SVSS.eps", plot = last_plot(), dpi = 600 )
 
 # Plot PM by region
 # plot by cluster + geom_line(group =1) # + geom_point(aes(colour = factor(sub))) 
@@ -131,10 +131,10 @@ rsa.HIPP$condition = factor(rsa.HIPP$condition, levels = rsa.HIPP$condition[orde
 levels(rsa.HIPP$condition)
 rsa.HIPP$condition = as.factor(rsa.HIPP$condtion)
 HIPP.plot = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity, fill = condition)) + geom_boxplot()  + facet_wrap(~roi, ncol = 2)
-HIPP.plot = HIPP.plot + coord_cartesian(ylim=c(-.1,.11)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
+HIPP.plot = HIPP.plot + coord_cartesian(ylim=c(-.3,.3)) + theme(text = element_text(size = 30, face = "bold")) + guides(fill = FALSE)
 HIPP.plot = HIPP.plot + labs(x = NULL) + scale_fill_brewer(palette= "Dark2")  + theme(strip.background = element_blank(),strip.text= element_blank(),axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())
 HIPP.plot
-ggsave("hipp_body_SVSS.eps", plot = last_plot(), dpi = 600 )
+# ggsave("hipp_body_SVSS.eps", plot = last_plot(), dpi = 600 )
 ##########################
 # throwing RANDOM back in the mix
 # HIPP.plot.allconds = ggplot(data = RSA.HIPP.allconds, aes(x = factor(condition), y = similarity)) + geom_boxplot() + geom_point(aes(colour = factor(sub)))  + facet_wrap(~roi, ncol = 2)
