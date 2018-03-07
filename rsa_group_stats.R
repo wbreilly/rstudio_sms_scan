@@ -149,7 +149,7 @@ rsa.HIPP.body = rsa.HIPP %>%  filter(roi != "lh-hipp-head", roi != "rh-hipp-head
 
 m1.HIPP = aov_ez("sub", "similarity", rsa.HIPP.body, within = c("condition"))
 m1.HIPP
-ls.HIPP = lsmeans(m1.HIPP,~condition,contr = "pairwise", adjust = NULL)
+ls.HIPP = lsmeans(m1.HIPP,~condition|roi,contr = "pairwise", adjust = NULL)
 ls.HIPP
 contrast(ls.HIPP, alpha=0.05, method="pairwise", adjust= "holm")
 # intact and random differ in hipp body, scrambled is near-trending
@@ -215,7 +215,7 @@ corr.plot = corr.plot + ggtitle("r = 0.46, p = 0.07")  + theme(legend.position="
 corr.plot = corr.plot + theme(text = element_text(size = 30, face = "bold"))
 corr.plot.phc = corr.plot
 corr.plot.phc 
-ggsave("phc_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+# ggsave("phc_diff_corr.pdf", plot = last_plot(), dpi = 600 )
 
 ####################
 # AT
@@ -255,7 +255,7 @@ corr.plot = corr.plot + ggtitle("r = 0.46, p = 0.07")  + theme(legend.position="
 corr.plot = corr.plot + theme(text = element_text(size = 30, face = "bold"))
 corr.plot.hipp = corr.plot
 corr.plot.hipp
-ggsave("lh_Tpole_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+# ggsave("lh_Tpole_diff_corr.pdf", plot = last_plot(), dpi = 600 )
 
 ####################
 # HIPP

@@ -1,0 +1,129 @@
+---
+title: "sms_scan_3_7_18"
+author: "WBR"
+date: "3/7/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(out.width = "70%")
+```
+
+## Load and prepare data 
+
+```{r}
+# RSA sum stats
+library(tidyverse)
+library(afex)
+
+
+# same verb RSA even for random
+rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDPforrandom_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
+# change label for random verb based
+rsa.SVDP$condition = ifelse(rsa.SVDP$condition == "random", "r_sameverb",ifelse(rsa.SVDP$condition == "intact","intact","scrambled")) 
+rsa.SVDP = rsa.SVDP %>% filter(condition == "r_sameverb")
+# SVSS with positions and beta threshold
+rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SSsamepos_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
+
+# add random r_sameverb for one combined dataset
+rsa = bind_rows(rsa.SVDP, rsa.SVSS)
+
+
+rsa = rsa %>% filter(sub != "s008")
+rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity))
+
+rsa.fixed = rsa %>% filter(condition != "random")
+rsafixed.sumstats = rsa.fixed %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity))
+
+# all.rois = ggplot(data = rsa, aes(x = condition, y = similarity)) + geom_boxplot() + facet_wrap( ~roi, ncol=6)
+# all.rois
+
+
+# the rois
+PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole'	)
+HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R')
+PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
+                 'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+vmpfc = c('near-VMPFC') 
+
+# make networks factor
+# first make logical vectors for member regions
+rsa$PM = rsa$roi %in% PM_rois
+rsa$AT = rsa$roi %in% AT_rois
+rsa$HIPP = rsa$roi %in% HIPP_rois
+rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
+
+# now assign group label in single column
+rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
+# delete the logical vectors
+rsa[,6:9] = NULL
+# rsa[,5:8] = NULL
+# make group a factor
+rsa$roi_group = as.factor(rsa$roi_group)
+
+# wish I did this earlier but hindsight yada yada
+rsa$roi = gsub(".*body-L$", "lh-hipp-body", rsa$roi)
+rsa$roi = gsub(".*body-R$", "rh-hipp-body", rsa$roi)
+rsa$roi = gsub(".*head-L$", "lh-hipp-head", rsa$roi)
+rsa$roi = gsub(".*head-R$", "rh-hipp-head", rsa$roi)
+rsa$roi = gsub(".*ant-L$", "lh-phc-ant", rsa$roi)
+rsa$roi = gsub(".*ant-R$", "rh-phc-ant", rsa$roi)
+rsa$roi = gsub(".*VMPFC", "VMPFC", rsa$roi)
+rsa$roi = gsub(".*prc-L$", "lh-prc", rsa$roi)
+rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
+########################
+# PMAT AT and HIPP only
+rsa.PMAT = rsa %>% filter(roi_group != "Other")
+```
+
+## Plot by network cluster
+
+```{r}
+clusters.rois = ggplot(data = rsa.PMAT, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.15, .5))
+clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+clusters.rois
+```
+
+## Full within subject network*condition ANOVA with follow-up holm-corrected paired contrasts
+
+```{r}
+m1 = aov_ez("sub", "similarity", rsa.PMAT, within = c("condition", "roi_group"))
+m1
+ls.m1 = lsmeans(m1,~condition|roi_group,contr = "pairwise", adjust = NULL)
+ls.m1
+contrast(ls.m1, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+## Make network groups
+
+```{r}
+rsa.PM = rsa %>% filter(roi_group == "PM")
+rsa.AT = rsa %>% filter(roi_group == "AT")
+rsa.HIPP = rsa %>% filter(roi_group == "HIPP")
+```
+
+## Separate network plots
+
+```{r}
+PM.all = ggplot(data = rsa.PM, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.15, .5))
+PM.all = PM.all + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+PM.all
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+# AT
+AT.all = ggplot(data = rsa.AT, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.15, .4))
+AT.all = AT.all + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+AT.all
+# ggsave("at.all.pdf", plot = last_plot(), dpi = 600 )
+
+# HIPP
+HIPP.all = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .25))
+HIPP.all = HIPP.all +ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+HIPP.all
+# ggsave("hipp.all.pdf", plot = last_plot(), dpi = 600 )
+```
+
+
+

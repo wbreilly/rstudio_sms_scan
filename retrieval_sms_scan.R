@@ -860,3 +860,12 @@ rt.diffs = rt.diffs %>%  filter(sub != "8", condition != "random")
 rt.diffs = rt.diffs %>% spread(condition,rtmean)
 rt.diffs =  rt.diffs %>% mutate(rtdiff = scrambled - intact)
 rt.diffs = data.frame(rt.diffs)
+
+# # diff between intact and RANDOM rts for every subject 
+d25[,4] = ifelse(d25[,4] == "intact", "intact", ifelse(d25[,4] == "scrambled", "scrambled","random"))
+d25$condition = as.factor(d25$condition)
+rt.diffs.rand = d25 %>% group_by(sub,condition) %>%  summarise(rtmean = mean(rt))
+rt.diffs.rand = rt.diffs.rand %>%  filter(sub != "8", condition != "scrambled")
+rt.diffs.rand = rt.diffs.rand %>% spread(condition,rtmean)
+rt.diffs.rand =  rt.diffs.rand %>% mutate(rtdiff = random - intact)
+rt.diffs.rand = data.frame(rt.diffs.rand)
