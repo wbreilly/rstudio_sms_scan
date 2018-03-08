@@ -292,6 +292,7 @@ d25 = dclean %>% filter(!position == 1)
 # # # # # # # # # # # # # # #
 # condition means
 # This is so dumb
+sumstats.pos = dclean %>% group_by(con.num, position) %>% summarise(mean = mean(rt), SD = sd(rt))
 dclean[,4] = ifelse(dclean[,4] == "intact", "intact", ifelse(dclean[,4] == "scrambled", "scrambled","random"))
 dclean$condition = as.factor(dclean$condition)
 
@@ -340,29 +341,29 @@ sumstats.pos[15,4] = sd(con3.pos5$mean)
 #
 n = length(unique(dclean$sub))
 sumstats.pos = mutate(sumstats.pos, SE = SD/sqrt(n))
-sumstats.pos[,1] = ifelse(sumstats.pos[,1] == "1", "Intact", ifelse(sumstats.pos[,1] == "2","Scrambled-Fixed", "Scrambled-Random"))
+# sumstats.pos[,1] = ifelse(sumstats.pos[,1] == "1", "Intact", ifelse(sumstats.pos[,1] == "2","Scrambled-Fixed", "Scrambled-Random"))
 # save
 sumstats.pos$exp = c(rep(2,15))
-write.csv(sumstats.pos, "sms_scan_retrieval_posplot.csv")
+# write.csv(sumstats.pos, "sms_scan_retrieval_posplot.csv")
 #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 sumstats.pos = data.frame(sumstats.pos)
-# sumstas.pos = sumstats.pos %>%  arrange(con.num )
-# # create a bar graph
-# limits <- aes(ymax = sumstats.pos$mean + sumstats.pos$SE,
-#               ymin = sumstats.pos$mean - sumstats.pos$SE)
-# 
-# p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(position), y = mean, fill = factor(position)))
-# p.pos.con = p.pos.con + geom_bar(stat = "identity",
-#                                  position = position_dodge(0.9)) +
-#   geom_errorbar(limits, position = position_dodge(0.9),
-#                 width = 0.15) +
-#   labs(x = NULL, y = "Reaction Time") +
-#   ggtitle("Event Schema Knowledge Faciliates Semantic Decisions")
-# +scale_fill_discrete(name = "Condition")  #+ scale_x_discrete("Conditions", labels =    c("1" = "Intact", "2" = "Scrambled-Fixed", "3" = "Scrambled-Random"))
-# p.pos.con = p.pos.con + coord_cartesian(ylim=c(550,1150)) + facet_wrap(~con.num) +  guides(fill = FALSE)
-# p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold",height = 6, width = 10))
-# #
-# p.pos.con
-# ggsave("scan_retrieval_RT.eps", plot = last_plot(), dpi = 600 )
+sumstas.pos = sumstats.pos %>%  arrange(con.num )
+# create a bar graph
+limits <- aes(ymax = sumstats.pos$mean + sumstats.pos$SE,
+              ymin = sumstats.pos$mean - sumstats.pos$SE)
+
+p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(position), y = mean, fill = factor(position)))
+p.pos.con = p.pos.con + geom_bar(stat = "identity",
+                                 position = position_dodge(0.9)) +
+  geom_errorbar(limits, position = position_dodge(0.9),
+                width = 0.15) +
+  labs(x = NULL, y = "Reaction Time") +
+  ggtitle("Event Schema Knowledge Faciliates Semantic Decisions")
++ scale_x_discrete("Conditions", labels =    c("1" = "Intact", "2" = "Scrambled-Fixed", "3" = "Scrambled-Random")) #scale_fill_discrete(name = "Conditions")  #
+p.pos.con = p.pos.con + coord_cartesian(ylim=c(550,1150)) + facet_wrap(~con.num) +  guides(fill = FALSE)
+p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold",height = 6, width = 10))
+#
+p.pos.con
+# ggsave("scan_retrieval_RTbyposition.pdf", plot = last_plot(), dpi = 600 )
 # 1150 X 750 doesn't work. Best would be to put all in one facet_grid figure
 # bring over exp 1 data
 # sumstats.pos.exp1 = read.csv("/Users/wbr/walter/dml/sms2.analyses/sms2_exp1_retrieval_posplot.csv",stringsAsFactors = TRUE)
@@ -473,7 +474,7 @@ p.pos.con = p.pos.con + coord_cartesian(ylim=c(600,1210)) + facet_grid(~exp) +  
 p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold")) + scale_y_continuous(breaks = c(600,700,800,900,1000,1100,1200))
 p.pos.con = p.pos.con + scale_fill_brewer(palette= "Dark2") + theme( axis.text.x = element_blank(), axis.ticks=element_blank())
 p.pos.con
- ggsave("retrieval_plot_sfn2_3_3_18.eps", plot = last_plot(), dpi = 600 )
+ # ggsave("retrieval_plot_sfn2_3_3_18.eps", plot = last_plot(), dpi = 600 )
 
 
 
