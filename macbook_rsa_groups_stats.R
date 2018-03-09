@@ -193,10 +193,10 @@ HIPP.plot
 # no behavior data for sub 23 
 rsa.diff.ps = rsa %>% filter(sub != "s023")
 # roi == "lh-phc-ant",
-rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi == "rh-Prec", condition != "random", condition != "r_sameverb") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi == "rh-Prec", condition != "scrambled", condition != "random") %>% summarise(simmean = mean(similarity))
 # rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group != "Other", condition != "random") %>%  summarise(simmean = mean(similarity))
 rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
-rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
 rsa.diff.ps = data.frame(rsa.diff.ps)
 # rsa.diff.VMPFC = rsa.diff.ps
 
@@ -206,15 +206,11 @@ rsa.diff.PM = rsa.diff.ps %>% filter(roi_group == "PM")
 # rsa.diff.HIPP = rsa.diff.ps %>% filter(roi_group == "HIPP")
 # rsa.diff.other = rsa.diff.ps %>% filter(roi_group == "Other")
 
-# could also grab the data from the retrieval script in rtdiffs$rtdiff
-# rsa.diff.PM$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.AT$rtdiffs =  c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.HIPP$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-rsa.diff.PM$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.HIPP$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.AT$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.other$rtdiffs = rt.diffs$rtdiff
+# grab diffs
+rsa.diff.PM$rtdiffs = rt.diffs.rand$rtdiff
+
+# get rid of outlier
+# rsa.diff.PM = rsa.diff.PM %>% filter(sub != "s007")
 
 cor.test(rsa.diff.PM$rtdiffs,rsa.diff.PM$psdiffs)
 # cor.test(rsa.diff.AT$rtdiffs,rsa.diff.AT$psdiffs)
@@ -225,21 +221,21 @@ cor.test(rsa.diff.PM$rtdiffs,rsa.diff.PM$psdiffs)
 # positive ps means higher ps for intact 
 
 corr.plot = ggplot(data = rsa.diff.PM,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 5) +   geom_smooth(method='lm')
-corr.plot = corr.plot + ggtitle("r = 0.46, p = 0.07")  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
+corr.plot = corr.plot + ggtitle("r = -.02, p = 0.94")  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
 corr.plot = corr.plot + theme(text = element_text(size = 30, face = "bold"))
 corr.plot.phc = corr.plot
 corr.plot.phc 
-# ggsave("phc_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+# ggsave("rh_prec_corr_intact_sameverb.pdf", plot = last_plot(), dpi = 600 )
 
 ####################
 # AT
 # no behavior data for sub 23 
 rsa.diff.ps = rsa %>% filter(sub != "s023")
 #,  roi == "lh-TPole"
-rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "AT",  roi == "lh-prc",condition != "random",condition != "r_sameverb") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "AT",  roi == "rh-prc",condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
 # rsa.diff.ps = rsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group != "Other", condition != "scrambled") %>%  summarise(simmean = mean(similarity))
 rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
-rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
 rsa.diff.ps = data.frame(rsa.diff.ps)
 # rsa.diff.VMPFC = rsa.diff.ps
 
@@ -249,14 +245,12 @@ rsa.diff.AT = rsa.diff.ps %>% filter(roi_group == "AT")
 # rsa.diff.HIPP = rsa.diff.ps %>% filter(roi_group == "HIPP")
 # rsa.diff.other = rsa.diff.ps %>% filter(roi_group == "Other")
 
-# could also grab the data from the retrieval script in rtdiffs$rtdiff
-# rsa.diff.PM$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.AT$rtdiffs =  c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.HIPP$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.PM$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.HIPP$rtdiffs = rt.diffs$rtdiff
-rsa.diff.AT$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.other$rtdiffs = rt.diffs$rtdiff
+#get diffs
+rsa.diff.AT$rtdiffs = rt.diffs.rand$rtdiff
+
+
+# get rid of outlier 
+
 
 # cor.test(rsa.diff.PM$rtdiffs,rsa.diff.PM$psdiffs)
 cor.test(rsa.diff.AT$rtdiffs,rsa.diff.AT$psdiffs)
@@ -265,10 +259,10 @@ cor.test(rsa.diff.AT$rtdiffs,rsa.diff.AT$psdiffs)
 
 # plot
 corr.plot = ggplot(data = rsa.diff.AT,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 5) +   geom_smooth(method='lm')
-corr.plot = corr.plot + ggtitle("r = 0.46, p = 0.07")  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
+corr.plot = corr.plot + ggtitle("r = -.07, p = 0.79")  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
 corr.plot = corr.plot + theme(text = element_text(size = 30, face = "bold"))
 corr.plot
-# ggsave("lh_Tpole_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+ggsave("rh_prc_diff_corr_intact_sameverb.pdf", plot = last_plot(), dpi = 600 )
 
 ####################
 # HIPP
@@ -320,10 +314,10 @@ corr.plot
 # no behavior data for sub 23 
 rsa.diff.ps = rsa %>% filter(sub != "s023")
 # roi == "lh-phc-ant",
-rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi == "rh-phc-ant", condition != "random", condition != "scrambled") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi == "rh-Prec", condition != "random", condition != "r_sameverb") %>% summarise(simmean = mean(similarity))
 # rsa.diff.ps = rsa.diff.ps %>% group_by(sub,condition,roi_group) %>% filter(roi_group != "Other", condition != "random") %>%  summarise(simmean = mean(similarity))
 rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
-rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
 rsa.diff.ps = data.frame(rsa.diff.ps)
 # rsa.diff.VMPFC = rsa.diff.ps
 
@@ -333,20 +327,12 @@ rsa.diff.PM = rsa.diff.ps %>% filter(roi_group == "PM")
 # rsa.diff.HIPP = rsa.diff.ps %>% filter(roi_group == "HIPP")
 # rsa.diff.other = rsa.diff.ps %>% filter(roi_group == "Other")
 
-# could also grab the data from the retrieval script in rtdiffs$rtdiff
-# rsa.diff.PM$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.AT$rtdiffs =  c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-# rsa.diff.HIPP$rtdiffs = c(251.423047 ,  1.467518 , 93.914570 , 85.780642 , 53.892886 ,201.064728 , 92.368439, 153.167665,  62.682078  ,98.558166 , 31.053571,  -9.381026)
-rsa.diff.PM$rtdiffs = rt.diffs.rand$rtdiff
-# rsa.diff.HIPP$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.AT$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
-# rsa.diff.other$rtdiffs = rt.diffs$rtdiff
+# grab the diffs
+rsa.diff.PM$rtdiffs = rt.diffs$rtdiff
 
+# test the corr
 cor.test(rsa.diff.PM$rtdiffs,rsa.diff.PM$psdiffs)
-# cor.test(rsa.diff.AT$rtdiffs,rsa.diff.AT$psdiffs)
-# cor.test(rsa.diff.HIPP$rtdiffs,rsa.diff.HIPP$psdiffs)
-# cor.test(rsa.diff.other$rtdiffs,rsa.diff.other$psdiffs)
+
 
 # positive rt means faster on intact than scrambled 
 # positive ps means higher ps for intact 
@@ -434,3 +420,20 @@ cor.test(rsa.diff.HIPP$rtdiffs,rsa.diff.HIPP$psdiffs)
 # corr.plot.hipp = corr.plot
 # corr.plot.hipp
 # ggsave("_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+
+#######################################################
+# fake data plots
+conditions = c("Intact", "Same Verb","Same Position","Scrambled")
+intact_vals =   rnorm(n=17, mean=.3, sd=.1)
+sameverb_vals =   rnorm(n=17, mean=.05, sd=.1)
+samepos_vals =   rnorm(n=17, mean=.15, sd=.1)
+scrambled_vals =   rnorm(n=17, mean=.15, sd=.1)
+fakedf = data.frame(intact_vals,sameverb_vals,samepos_vals,scrambled_vals)
+fakedf = fakedf %>% gather("condition","similarity")
+
+
+fake.plot = ggplot(data = fakedf, aes(x = factor(condition), y = similarity)) +coord_cartesian(ylim=c(-.1,.4))+ geom_boxplot(outlier.shape = NA)  + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+fake.plot =  fake.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+fake.plot
+ggsave("fake_AT_h2.pdf", plot = last_plot(), dpi = 600 )
+# 

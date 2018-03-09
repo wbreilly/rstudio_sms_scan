@@ -76,7 +76,7 @@ rsa.PMAT = rsa %>% filter(roi_group != "Other")
 ## Plot by network cluster
 
 ```{r fig.width = 12, fig.asp = .62}
-clusters.rois = ggplot(data = rsa.PMAT, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.15, .5))
+clusters.rois = ggplot(data = rsa.PMAT, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + geom_jitter(fill = sub)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.15, .5))
 clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
 clusters.rois
 ```
