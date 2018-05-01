@@ -1,0 +1,39 @@
+---
+  title: "sms_scan_3_7_18"
+author: "WBR"
+date: "4/27/2018"
+output: html_document
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(out.width = "70%")
+```
+
+## Load and prepare data 
+
+```{r}
+# RSA sum stats
+library(tidyverse)
+library(afex)
+```
+
+```{r}
+san_check = read.table("corr_tmap_and_betas.txt")
+colnames(san_check) = c("sub", "do","dah","corr")
+```
+
+```{r}
+sum_corr = san_check %>%  group_by(sub) %>% summarise(corr_mean = mean(corr))
+# mean corr across trials and subjects is .74 
+```
+
+```{r}
+san_check_boxcar = read.table("corr_tmap_and_betas_boxcarmodel.txt")
+colnames(san_check_boxcar) = c("sub", "do","dah","corr")
+```
+
+```{r}
+sum_corr2 = san_check_boxcar %>%  group_by(sub) %>% summarise(corr_mean = mean(corr))
+# mean corr across trials and subjects is .74 
+```

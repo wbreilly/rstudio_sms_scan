@@ -1,10 +1,10 @@
 ---
-title: "sms_scan_3_7_18"
+  title: "sms_scan_4_5_18_notrhesholding_betas"
 author: "WBR"
-date: "4/27/2018"
+date: "4/5/2018"
 output: html_document
 ---
-
+  
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # knitr::opts_chunk$set(out.width = "70%")
@@ -18,17 +18,14 @@ library(tidyverse)
 library(afex)
 
 # same verb RSA even for random
-rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
-# rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDP_beta_4_26_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDPforrandom_beta_4_5_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # path to macbook version
 # rsa.SVDP = read.table("RSAmeans_FS_ANTS_SVDPforrandom_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
 # change label for random verb based
 rsa.SVDP$condition = ifelse(rsa.SVDP$condition == "random", "r_sameverb",ifelse(rsa.SVDP$condition == "intact","intact","scrambled")) 
 rsa.SVDP = rsa.SVDP %>% filter(condition == "r_sameverb")
-
 # SVSS with positions and beta threshold
-rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
-# rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_beta_4_27_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SSsamepos_allps_beta_4_5_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # path to macbook version
 # rsa.SVSS = read.table("RSAmeans_FS_ANTS_SSsamepos_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
 
@@ -79,8 +76,8 @@ rsa.PMAT = rsa %>% filter(roi_group != "Other")
 ## Plot by network cluster
 
 ```{r fig.width = 12, fig.asp = .62}
-clust.fig.dat = rsa.PMAT %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
-clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.05, .4))
+all.fig.dat = rsa %>% group_by(sub,condition, roi_group) %>% summarise(similarity = mean(similarity))
+clusters.rois = ggplot(data = all.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.1, .20))
 clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
 clusters.rois
 ```
@@ -95,7 +92,7 @@ ls.m1
 contrast(ls.m1, alpha=0.05, method="pairwise", adjust= "holm")
 ```
 
-## Make roi groups
+## Make network groups
 
 ```{r}
 rsa.PM = rsa %>% filter(roi_group == "PM")
@@ -117,15 +114,25 @@ at.fig.dat = rsa.PMAT %>%  filter(roi_group == "AT") %>% group_by(sub,condition)
 AT.check = ggplot(data = at.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .3))
 AT.check = AT.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
 AT.check
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+
+PM.all = ggplot(data = rsa.PM, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.15, .5))
+PM.all = PM.all + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+PM.all
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+# AT
+AT.all = ggplot(data = rsa.AT, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.15, .4))
+AT.all = AT.all + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+AT.all
 # ggsave("at.all.pdf", plot = last_plot(), dpi = 600 )
 
-#HIPP
-hipp.fig.dat = rsa.PMAT %>%  filter(roi_group == "HIPP") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
-hipp.check = ggplot(data = hipp.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .17))
-hipp.check = hipp.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
-hipp.check
-# ggsave("at.all.pdf", plot = last_plot(), dpi = 600 )
-
+# HIPP
+HIPP.all = ggplot(data = rsa.HIPP, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .25))
+HIPP.all = HIPP.all +ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+HIPP.all
+# ggsave("hipp.all.pdf", plot = last_plot(), dpi = 600 )
 ```
 
 ## Which PM ROIs drive effects
@@ -147,14 +154,14 @@ contrast(ls.PM, alpha=0.05, method="pairwise", adjust= "holm")
 ## Plot example region
 # rh-Prec
 roi = rh.Prec:
- contrast                    estimate        SE     df t.ratio p.value
- r_sameverb - intact    -7.448388e-02 0.0202036 334.82  -3.687  0.0013
- r_sameverb - random    -1.105341e-01 0.0202036 334.82  -5.471  <.0001
- r_sameverb - scrambled -4.931024e-02 0.0202036 334.82  -2.441  0.0455
- intact - random        -3.605024e-02 0.0202036 334.82  -1.784  0.1505
- intact - scrambled      2.517365e-02 0.0202036 334.82   1.246  0.2136
- random - scrambled      6.122388e-02 0.0202036 334.82   3.030  0.0105
- 
+  contrast                    estimate        SE     df t.ratio p.value
+r_sameverb - intact    -7.448388e-02 0.0202036 334.82  -3.687  0.0013
+r_sameverb - random    -1.105341e-01 0.0202036 334.82  -5.471  <.0001
+r_sameverb - scrambled -4.931024e-02 0.0202036 334.82  -2.441  0.0455
+intact - random        -3.605024e-02 0.0202036 334.82  -1.784  0.1505
+intact - scrambled      2.517365e-02 0.0202036 334.82   1.246  0.2136
+random - scrambled      6.122388e-02 0.0202036 334.82   3.030  0.0105
+
 ```{r}
 pm.fig.dat = rsa %>%  filter(roi == "rh-Prec") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
 PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .3))
@@ -186,13 +193,13 @@ contrast(ls.AT, alpha=0.05, method="pairwise", adjust= "holm")
 
 ## Plot AT example region: r-prc
 roi = rh.prc:
- contrast                   estimate         SE     df t.ratio p.value
- r_sameverb - intact    -0.046949294 0.01899278 147.74  -2.472  0.0874
- r_sameverb - random    -0.008561882 0.01899278 147.74  -0.451  1.0000
- r_sameverb - scrambled -0.001848824 0.01899278 147.74  -0.097  1.0000
- intact - random         0.038387412 0.01899278 147.74   2.021  0.1803
- intact - scrambled      0.045100471 0.01899278 147.74   2.375  0.0943
- random - scrambled      0.006713059 0.01899278 147.74   0.353  1.0000
+  contrast                   estimate         SE     df t.ratio p.value
+r_sameverb - intact    -0.046949294 0.01899278 147.74  -2.472  0.0874
+r_sameverb - random    -0.008561882 0.01899278 147.74  -0.451  1.0000
+r_sameverb - scrambled -0.001848824 0.01899278 147.74  -0.097  1.0000
+intact - random         0.038387412 0.01899278 147.74   2.021  0.1803
+intact - scrambled      0.045100471 0.01899278 147.74   2.375  0.0943
+random - scrambled      0.006713059 0.01899278 147.74   0.353  1.0000
 
 ```{r}
 at.fig.dat = rsa %>%  filter(roi == "rh-prc") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
