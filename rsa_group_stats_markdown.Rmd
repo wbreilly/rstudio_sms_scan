@@ -18,7 +18,9 @@ library(tidyverse)
 library(afex)
 
 # same verb RSA even for random
-rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_beta_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_TMAP_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDP_beta_4_26_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # path to macbook version
 # rsa.SVDP = read.table("RSAmeans_FS_ANTS_SVDPforrandom_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
@@ -27,7 +29,9 @@ rsa.SVDP$condition = ifelse(rsa.SVDP$condition == "random", "r_sameverb",ifelse(
 rsa.SVDP = rsa.SVDP %>% filter(condition == "r_sameverb")
 
 # SVSS with positions and beta threshold
-rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_beta_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_TMAP_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_beta_4_27_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # path to macbook version
 # rsa.SVSS = read.table("RSAmeans_FS_ANTS_SSsamepos_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
@@ -214,7 +218,7 @@ AT.plot
 ```{r}
 m1.HIPP = aov_ez("sub", "similarity", rsa.HIPP, within = c("condition","roi"))
 m1.HIPP
-ls.HIPP = lsmeans(m1.HIPP,~condition|roi,contr = "pairwise", adjust = NULL)
+ls.HIPP = lsmeans(m1.HIPP,~condition,contr = "pairwise", adjust = NULL)
 # ls.HIPP
 contrast(ls.HIPP, alpha=0.05, method="pairwise", adjust= "holm")
 ```
@@ -222,11 +226,20 @@ contrast(ls.HIPP, alpha=0.05, method="pairwise", adjust= "holm")
 ## plot left hipp body
 
 ```{r}
-rsa.HIPP.example = rsa %>% filter(roi == "lh-hipp-body")
+rsa.HIPP.example = rsa %>% filter(roi == "lh-hipp-head") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
 HIPP.plot = ggplot(data = rsa.HIPP.example, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
 HIPP.plot = HIPP.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
 HIPP.plot
 ```
+
+```{r}
+rsa.VMPFC = rsa %>% filter(roi == "VMPFC") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+VMPFC.plot = ggplot(data = rsa.VMPFC, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+VMPFC.plot = VMPFC.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+VMPFC.plot
+```
+
+
 
 ## VMPFC, nada yet
 
@@ -239,4 +252,10 @@ ls.VMPFC
 contrast(ls.VMPFC, alpha=0.05, method="pairwise", adjust= "holm")
 ```
 
+```{r fig.width = 12, fig.asp = .62}
 
+pm.fig.dat = rsa.PMAT %>%  filter(roi_group == "PM") %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .3)) +  facet_wrap( ~roi, ncol=5)
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+```

@@ -20,16 +20,19 @@ library(afex)
 
 
 # same verb RSA even for random
+rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_TMAP_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDPforrandom_TMAP_3_26_18.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDPforrandom_TMAP_4_4_18_1.15thresh.txt", header = TRUE, stringsAsFactors = TRUE)
-rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 
 rsa.SVDP$condition = ifelse(rsa.SVDP$condition == "random", "r_sameverb",ifelse(rsa.SVDP$condition == "intact","intact","scrambled")) 
 rsa.SVDP = rsa.SVDP %>% filter(condition == "r_sameverb")
+
 # SVSS with positions and beta threshold
+rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_TMAP_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SSsamepos_allps_TMAP_3_27_18.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SSsamepos_allps_TMAP_4_4_18_1.15thresh.txt", header = TRUE, stringsAsFactors = TRUE)
-rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_TMAP_4_30_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 
 
 # add random r_sameverb for one combined dataset
@@ -80,16 +83,19 @@ tmaprsa = rsa
 
 ```{r}
 # same verb RSA even for random
+rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_sameVERB_beta_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDPforrandom_beta_4_5_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDPforrandom_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
-rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDP_beta_4_26_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SVDP_beta_4_26_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # change label for random verb based
 rsa.SVDP$condition = ifelse(rsa.SVDP$condition == "random", "r_sameverb",ifelse(rsa.SVDP$condition == "intact","intact","scrambled")) 
 rsa.SVDP = rsa.SVDP %>% filter(condition == "r_sameverb")
+
 # SVSS with positions and beta threshold
+rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_beta_5_1_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SSsamepos_allps_beta_4_5_18_nothresh.txt", header = TRUE, stringsAsFactors = TRUE)
 # rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_SSsamepos_allps_pears_1.15betathresh_3_3_18.txt", header = TRUE, stringsAsFactors = TRUE)
-rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_beta_4_27_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
+# rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_FS_ANTS_samePOS_allps_beta_4_27_18_1.2thresh.txt", header = TRUE, stringsAsFactors = TRUE)
 
 # add random r_sameverb for one combined dataset
 rsa = bind_rows(rsa.SVDP, rsa.SVSS)
@@ -140,16 +146,16 @@ tmap.meandat = tmaprsa %>% group_by(sub,condition,roi_group) %>% summarise(simil
 beta.meandat = betarsa %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
 ```
 
-## Look at difference between intact and r_sameverb in OCC
+## Look at difference between intact and random in OCC
 
 ```{r}
 #tmap diffs first 
-tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi == "rh-TPole", condition != "r_sameverb",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi == "lh-occ-pole", condition != "r_sameverb",condition != "scrambled") %>% summarise(simmean = mean(similarity))
 tmaprsa.diff.ps = tmaprsa.diff.ps %>%  spread(condition, simmean) 
 tmaprsa.diff.ps = tmaprsa.diff.ps %>% mutate(psdiffs = intact - random)
 tmaprsa.diff.ps = data.frame(tmaprsa.diff.ps)
 
-betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi == "rh-TPole", condition != "r_sameverb",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi == "lh-occ-pole", condition != "r_sameverb",condition != "scrambled") %>% summarise(simmean = mean(similarity))
 betarsa.diff.ps = betarsa.diff.ps %>%  spread(condition, simmean) 
 betarsa.diff.ps = betarsa.diff.ps %>% mutate(psdiffs = intact - random)
 betarsa.diff.ps = data.frame(betarsa.diff.ps)
@@ -167,19 +173,45 @@ psdiffplot1 = ggplot(data = alldiff, aes(x = factor(sub), y = psdiffs, fill = fa
 psdiffplot1
 
 ```
+## Look at difference between intact and r_sameverb in OCC
 
+```{r}
+#tmap diffs first 
+tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi == "lh-occ-pole", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+tmaprsa.diff.ps = tmaprsa.diff.ps %>%  spread(condition, simmean) 
+tmaprsa.diff.ps = tmaprsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
+tmaprsa.diff.ps = data.frame(tmaprsa.diff.ps)
+
+betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi == "lh-occ-pole", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+betarsa.diff.ps = betarsa.diff.ps %>%  spread(condition, simmean) 
+betarsa.diff.ps = betarsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
+betarsa.diff.ps = data.frame(betarsa.diff.ps)
+
+tmaprsa.diff.ps$imagetype = "tmap"
+betarsa.diff.ps$imagetype = "beta"
+
+alldiff = bind_rows(tmaprsa.diff.ps, betarsa.diff.ps)
+
+```
+## Plot alldiff
+
+```{r fig.width = 12, fig.asp = .62}
+psdiffplot1 = ggplot(data = alldiff, aes(x = factor(sub), y = psdiffs, fill = factor(imagetype)))  + geom_bar(stat = "identity",position = position_dodge(0.9)) 
+psdiffplot1
+
+```
 
 
 ## Look at difference between intact and r_sameverb in PM
 
 ```{r}
 #tmap diffs first 
-tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi =="rh-Prec", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi =="lh-Prec", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
 tmaprsa.diff.ps = tmaprsa.diff.ps %>%  spread(condition, simmean) 
 tmaprsa.diff.ps = tmaprsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
 tmaprsa.diff.ps = data.frame(tmaprsa.diff.ps)
 
-betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi =="rh-Prec", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "PM", roi =="lh-Prec", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
 betarsa.diff.ps = betarsa.diff.ps %>%  spread(condition, simmean) 
 betarsa.diff.ps = betarsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
 betarsa.diff.ps = data.frame(betarsa.diff.ps)
@@ -228,12 +260,12 @@ psdiffplot1
 
 ```{r}
 #tmap diffs first 
-tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "AT", roi == "rh-prc", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "AT", roi == "lh-prc", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
 tmaprsa.diff.ps = tmaprsa.diff.ps %>%  spread(condition, simmean) 
 tmaprsa.diff.ps = tmaprsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
 tmaprsa.diff.ps = data.frame(tmaprsa.diff.ps)
 
-betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "AT", roi == "rh-prc", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "AT", roi == "lh-prc", condition != "random",condition != "scrambled") %>% summarise(simmean = mean(similarity))
 betarsa.diff.ps = betarsa.diff.ps %>%  spread(condition, simmean) 
 betarsa.diff.ps = betarsa.diff.ps %>% mutate(psdiffs = intact - r_sameverb)
 betarsa.diff.ps = data.frame(betarsa.diff.ps)
@@ -280,7 +312,33 @@ psdiffplot1
 
 ```
 
+## Look at difference between intact and random in HIPP
 
+```{r}
+#tmap diffs first 
+tmaprsa.diff.ps = tmaprsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "HIPP", condition != "r_samverb",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+tmaprsa.diff.ps = tmaprsa.diff.ps %>%  spread(condition, simmean) 
+tmaprsa.diff.ps = tmaprsa.diff.ps %>% mutate(psdiffs = intact - random)
+tmaprsa.diff.ps = data.frame(tmaprsa.diff.ps)
+
+betarsa.diff.ps = betarsa %>% group_by(sub,condition,roi_group) %>% filter(roi_group == "HIPP", condition != "r_sameverb",condition != "scrambled") %>% summarise(simmean = mean(similarity))
+betarsa.diff.ps = betarsa.diff.ps %>%  spread(condition, simmean) 
+betarsa.diff.ps = betarsa.diff.ps %>% mutate(psdiffs = intact - random)
+betarsa.diff.ps = data.frame(betarsa.diff.ps)
+
+tmaprsa.diff.ps$imagetype = "tmap"
+betarsa.diff.ps$imagetype = "beta"
+
+alldiff = bind_rows(tmaprsa.diff.ps, betarsa.diff.ps)
+
+```
+## Plot alldiff
+
+```{r fig.width = 12, fig.asp = .62}
+psdiffplot1 = ggplot(data = alldiff, aes(x = factor(sub), y = psdiffs, fill = factor(imagetype)))  + geom_bar(stat = "identity",position = position_dodge(0.9)) 
+psdiffplot1
+
+```
 
 
 
