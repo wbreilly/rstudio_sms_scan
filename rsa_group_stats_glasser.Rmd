@@ -1,0 +1,112 @@
+---
+title: "glasser_sms_scan_5_2_18"
+author: "WBR"
+date: "5/2/2018"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(out.width = "70%")
+```
+
+## Load and prepare data 
+
+```{r}
+# RSA sum stats
+library(tidyverse)
+library(afex)
+library(ggforce)
+
+# same verb RSA even for random
+rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_Glasser_sameVERB_tmap_5_2_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa.SVDP$condition = ifelse(rsa.SVDP$condition == "random", "r_sameverb",ifelse(rsa.SVDP$condition == "intact","intact","scrambled")) 
+rsa.SVDP = rsa.SVDP %>% filter(condition == "r_sameverb")
+
+# SVSS with positions and beta threshold
+rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_Glasser_samePOS_allps_tmap_5_2_18_7.5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+
+# add random r_sameverb for one combined dataset
+rsa = bind_rows(rsa.SVDP, rsa.SVSS)
+
+# noisiest subject
+rsa = rsa %>% filter(sub != "s008")
+rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity))
+
+# the rois
+vtc_rois = c('reslice-L-LO1-ROI','reslice-L-LO2-ROI','reslice-L-LO3-ROI','reslice-L-FFC-ROI','reslice-L-TE1p-ROI')
+a_prc_rois = c('reslice-L-PeEc-ROI') # 'reslice-L-EC-ROI',
+pam_rois = c('reslice-L-AVI-ROI','reslice-L-FOP5-ROI','reslice-L-45-ROI','reslice-L-44-ROI','reslice-L-FOP4-ROI')
+
+# find any roi that has a 'V' followd by a digit. Should grab all the visual ROIs
+rsa$vischeck = grepl(".*V\\d.*",rsa$roi)
+
+# 
+# make group factor
+# first make logical vectors for member regions
+rsa$vtc_rois = rsa$roi %in% vtc_rois
+rsa$a_prc_rois = rsa$roi %in%  a_prc_rois
+rsa$pam_rois = rsa$roi %in% pam_rois
+
+# 
+# now assign group label in single column
+rsa$roi_group = ifelse(rsa$vtc_rois == TRUE, "vtc", ifelse(rsa$a_prc_rois == TRUE, "a_prc", ifelse(rsa$pam_rois == TRUE,"pam", ifelse(rsa$vischeck == TRUE,"v_something","unclassified" ))))
+# # delete the logical vectors
+rsa[,6:9] = NULL
+# # make group a factor
+rsa$roi_group = as.factor(rsa$roi_group)
+# 
+# # wish I did this earlier but hindsight yada yada
+# rsa$roi = gsub(".*body-L$", "lh-hipp-body", rsa$roi)
+# rsa$roi = gsub(".*body-R$", "rh-hipp-body", rsa$roi)
+# rsa$roi = gsub(".*head-L$", "lh-hipp-head", rsa$roi)
+# rsa$roi = gsub(".*head-R$", "rh-hipp-head", rsa$roi)
+# rsa$roi = gsub(".*ant-L$", "lh-phc-ant", rsa$roi)
+# rsa$roi = gsub(".*ant-R$", "rh-phc-ant", rsa$roi)
+# rsa$roi = gsub(".*VMPFC", "VMPFC", rsa$roi)
+# rsa$roi = gsub(".*prc-L$", "lh-prc", rsa$roi)
+# rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
+```
+
+# do a little cleanup
+
+```{r}
+# get rid of corrs of 1 and -1 caused by empty ROIs
+rsa = rsa %>% mutate(exclude = abs(similarity) == 1)
+rsa = rsa %>% filter(exclude == FALSE)
+rsa$exclude = NULL
+```
+
+
+## Plot by group
+
+```{r fig.width = 12, fig.asp = .62}
+clust.fig.dat = rsa %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
+clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.05, .4))
+clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+clusters.rois
+```
+
+## Full within subject network*condition ANOVA with follow-up holm-corrected paired contrasts
+
+```{r}
+rsa.charrois = rsa %>% filter(roi_group != "unclassified")
+m1 = aov_ez("sub", "similarity", rsa.charrois, within = c("condition", "roi_group"))
+m1
+ls.m1 = lsmeans(m1,~condition|roi_group,contr = "pairwise", adjust = NULL)
+ls.m1
+contrast(ls.m1, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+<!-- look at each roi  -->
+
+```{r}
+rsa.charrois = rsa.charrois %>%  filter(roi_group != "v_something")
+m1 = aov_ez("sub", "similarity", rsa.charrois, within = c("condition", "roi"))
+m1
+ls.m1 = lsmeans(m1,~condition|roi,contr = "pairwise", adjust = NULL)
+ls.m1
+contrast(ls.m1, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+

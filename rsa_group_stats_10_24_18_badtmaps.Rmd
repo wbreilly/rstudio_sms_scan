@@ -1,0 +1,321 @@
+---
+title: "rsa_group_stats_10_24_18"
+author: "WBR"
+date: "10/24/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(out.width = "70%")
+```
+
+## Load and prepare data 
+
+```{r}
+# RSA sum stats
+library(tidyverse)
+library(afex)
+library(ggforce)
+
+# same verb RSA even for random
+rsa.SVDP = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_same_verb_10_25_18_5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+
+rsa.SVDP$condition = ifelse(rsa.SVDP$condition == "random", "r_sameverb",ifelse(rsa.SVDP$condition == "intact","intact","scrambled")) 
+rsa.SVDP = rsa.SVDP %>% filter(condition == "r_sameverb")
+
+# SVSS with positions and beta threshold
+rsa.SVSS = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/singletrial_4_rsatoolbox/november_17/RSAmeans_same_position_10_25_18_5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+
+
+# add random r_sameverb for one combined dataset
+rsa = bind_rows(rsa.SVDP, rsa.SVSS)
+
+# noisiest subject
+bad_subs = c('s001', "s008","s016", "s027","s043","s032","s039", "s041")
+rsa$drop_subs = rsa$sub %in% bad_subs
+rsa = rsa[!(rsa$drop_subs == TRUE),]
+       
+rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity))
+
+
+# the rois
+PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole', 'lh-OFC', 'rh-OFC')
+HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 'near-hipp-tail-L', 'near-hipp-tail-R')
+PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
+                 'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+IFG_INS = c('lh-insula-short', 'lh-insula-inf', 'lh-inf-opercular', 'lh-inf-triang', 'rh-insula-short', 'rh-insula-inf', 'rh-inf-opercular', 'rh-inf-triang')
+
+# vmpfc = c('near-VMPFC') 
+
+# make networks factor
+# first make logical vectors for member regions
+rsa$PM = rsa$roi %in% PM_rois
+rsa$AT = rsa$roi %in% AT_rois
+rsa$HIPP = rsa$roi %in% HIPP_rois
+rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
+rsa$IFG_INS = rsa$roi %in% IFG_INS
+
+# now assign group label in single column
+# rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
+rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", ifelse(rsa$IFG_INS == TRUE, "IFG_INS","Other"))))
+# delete the logical vectors
+rsa[,6:11] = NULL
+# make group a factor
+rsa$roi_group = as.factor(rsa$roi_group)
+
+# wish I did this earlier but hindsight yada yada
+rsa$roi = gsub(".*body-L$", "lh-hipp-body", rsa$roi)
+rsa$roi = gsub(".*body-R$", "rh-hipp-body", rsa$roi)
+rsa$roi = gsub(".*head-L$", "lh-hipp-head", rsa$roi)
+rsa$roi = gsub(".*head-R$", "rh-hipp-head", rsa$roi)
+rsa$roi = gsub(".*tail-L$", "lh-hipp-tail", rsa$roi)
+rsa$roi = gsub(".*tail-R$", "rh-hipp-tail", rsa$roi)
+rsa$roi = gsub(".*ant-L$", "lh-phc-ant", rsa$roi)
+rsa$roi = gsub(".*ant-R$", "rh-phc-ant", rsa$roi)
+# rsa$roi = gsub(".*VMPFC", "VMPFC", rsa$roi)
+rsa$roi = gsub(".*prc-L$", "lh-prc", rsa$roi)
+rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
+########################
+# PMAT AT and HIPP only
+rsa.PMAT = rsa %>% filter(roi_group != "Other") %>% filter(roi_group != "IFG_INS")
+```
+
+## Plot by network cluster
+
+```{r fig.width = 12, fig.asp = .62}
+clust.fig.dat = rsa.PMAT %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
+clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.05, .35))
+clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+clusters.rois
+```
+
+## Full within subject network*condition ANOVA with follow-up holm-corrected paired contrasts
+
+```{r}
+m1 = aov_ez("sub", "similarity", rsa.PMAT, within = c("condition", "roi_group"))
+m1
+ls.m1 = lsmeans(m1,~condition|roi_group,contr = "pairwise", adjust = NULL)
+ls.m1
+contrast(ls.m1, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+## Make roi groups
+
+```{r}
+rsa.PM = rsa %>% filter(roi_group == "PM")
+rsa.AT = rsa %>% filter(roi_group == "AT")
+rsa.HIPP = rsa %>% filter(roi_group == "HIPP")
+```
+
+## Separate network plots
+
+```{r fig.width = 12, fig.asp = .62}
+
+pm.fig.dat = rsa.PMAT %>%  filter(roi_group == "PM") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .3))
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+at.fig.dat = rsa.PMAT %>%  filter(roi_group == "AT") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+AT.check = ggplot(data = at.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .3))
+AT.check = AT.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+AT.check
+# ggsave("at.all.pdf", plot = last_plot(), dpi = 600 )
+
+#HIPP
+# hipp.fig.dat = rsa.PMAT %>%  filter(roi_group == "HIPP") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+# hipp.check = ggplot(data = hipp.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .17))
+# hipp.check = hipp.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+# hipp.check
+# # ggsave("at.all.pdf", plot = last_plot(), dpi = 600 )
+
+```
+
+## Which PM ROIs drive effects
+# Earlier observed that r_sameverb differeed from all other conditions in PM network 
+# ROI*condition ANOVA indicated significant main effects of condition and roi, and a trending interaction
+# Follow up contrasts indicate that r_sameverb is significantly different from at least one other condition in:
+# lh-ANG,rh-ANG,lh-PCC,lh-Prec,rh-Prec
+# Next will plot rh-Prec as representative region
+
+
+```{r}
+m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition", "roi"))
+m1.PM
+ls.PM = lsmeans(m1.PM,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.PM
+contrast(ls.PM, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+ 
+```{r}
+pm.fig.dat = rsa %>%  filter(roi == "lh-Prec") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .3))
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+
+
+# rsa.PM.example = rsa %>% filter(roi == "rh-Prec")
+# PM.plot = ggplot(data = rsa.PM.example, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+# PM.plot = PM.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+# PM.plot
+# ggsave("rh-prec.pdf", plot = last_plot(), dpi = 600 )
+```
+
+## Which AT ROIs drive effects
+# Earlier we saw that intact and r_sameverb are different in AT (p = .03) and intact and scrambled are different (p = .04)
+# Which ROIs drive that effect? Curiously this second ANOVA is trending for a main effect of condition...?
+# Effect is driven by prc with, r-prc trending for difference between intact and r_samverb (p = .09) and intact and scrambled (p = .09)
+
+```{r}
+m1.AT = aov_ez("sub", "similarity", rsa.AT, within = c("condition", "roi"))
+m1.AT
+ls.AT = lsmeans(m1.AT,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.AT
+contrast(ls.AT, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+
+
+```{r}
+at.fig.dat = rsa %>%  filter(roi == "rh-prc") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+at.check = ggplot(data = at.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .3))
+at.check = at.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+at.check
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+
+# rsa.AT.example = rsa %>% filter(roi == "rh-prc")
+# AT.plot = ggplot(data = rsa.AT.example, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+# AT.plot = AT.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+# AT.plot
+```
+
+## Which ROIs in HIPP are doing anything
+# lh-hipp-body has trending effect between intact and same-verb (p = .09)
+
+```{r}
+m1.HIPP = aov_ez("sub", "similarity", rsa.HIPP, within = c("condition","roi"))
+m1.HIPP
+ls.HIPP = lsmeans(m1.HIPP,~condition,contr = "pairwise", adjust = NULL)
+# ls.HIPP
+contrast(ls.HIPP, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+## plot left hipp body
+
+```{r}
+rsa.HIPP.example = rsa %>% filter(roi == "lh-hipp-head") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+HIPP.plot = ggplot(data = rsa.HIPP.example, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+HIPP.plot = HIPP.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+HIPP.plot
+```
+
+```{r}
+rsa.VMPFC = rsa %>% filter(roi == "rh-VMPFC") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+VMPFC.plot = ggplot(data = rsa.VMPFC, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+VMPFC.plot = VMPFC.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+VMPFC.plot
+```
+
+
+
+## VMPFC, nada yet
+
+```{r}
+rsa.VMPFC = rsa %>% filter(roi == "rh-VMPFC")
+m1.VMPFC = aov_ez("sub", "similarity", rsa.VMPFC, within = c("condition"))
+m1.VMPFC
+ls.VMPFC = lsmeans(m1.VMPFC,~condition,contr = "pairwise", adjust = NULL)
+ls.VMPFC
+contrast(ls.VMPFC, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r fig.width = 12, fig.asp = .62}
+
+pm.fig.dat = rsa.PMAT %>%  filter(roi_group == "PM") %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .3)) +  facet_wrap( ~roi, ncol=5)
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+```
+
+```{r fig.width = 12, fig.asp = .62}
+
+multi.fig.dat = rsa %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+
+for (ipage in 1:12) {
+  ggplot(data = multi.fig.dat, aes(x = factor(condition), y = similarity)) + scale_y_continuous(limits = c(-.05, .3)) + geom_boxplot() + facet_wrap_paginate(~roi, nrow=2, ncol=2, page=ipage) + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+  fname = sprintf("allrois_5ptile_10_24_18_%d.pdf", ipage) 
+  ggsave(fname)
+}
+```
+
+```{r}
+rsa.IFG = rsa %>% filter(roi_group == "IFG_INS")
+m1.IFG = aov_ez("sub", "similarity", rsa.IFG, within = c("condition", "roi"))
+m1.IFG
+ls.IFG = lsmeans(m1.IFG,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.IFG
+contrast(ls.IFG, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r fig.width = 12, fig.asp = .62}
+
+pm.fig.dat = rsa.IFG %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot() + scale_y_continuous(limits = c(-.05, .3)) +  facet_wrap( ~roi, ncol=5)
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+```
+
+```{r}
+# is anything sig dif with intact besides same position??
+# rsa$sub = factor(rsa$sub)
+# rsa.all = rsa %>% filter(rsa$position == 1)  
+# rsa.all = rsa.all %>% filter(rsa$sub != "s041")
+# rsa.all = rsa.all %>%   group_by(sub,roi,condition) %>% summarise(similarity =mean(similarity))
+# rsa.all = rsa %>% filter(rsa$roi != "lh-occ-pole")
+m1.all = aov_ez("sub", "similarity", rsa, within = c("condition", "roi"))
+m1.all
+ls.all = lsmeans(m1.all,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.IFG
+contrast(ls.all, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r}
+rsa.mpfc = rsa %>% filter(rsa$roi == "lh-MPFC" )
+rsa.mpfc = rsa.mpfc %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+m1.all = aov_ez("sub", "similarity", rsa.mpfc, within = c("condition"))
+m1.all
+ls.all = lsmeans(m1.all,~condition,contr = "pairwise", adjust = NULL)
+ls.all
+contrast(ls.all, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r}
+rsa.mpfc = rsa %>% filter(rsa$roi == "rh-inf-opercular" )
+rsa.mpfc = rsa.mpfc %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+m1.all = aov_ez("sub", "similarity", rsa.mpfc, within = c("condition"))
+m1.all
+ls.all = lsmeans(m1.all,~condition,contr = "pairwise", adjust = NULL)
+ls.all
+contrast(ls.all, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
