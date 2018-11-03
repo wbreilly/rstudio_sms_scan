@@ -1,4 +1,5 @@
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2FDVSS.analysis.R="C27A78C5"
+~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2FFIR_10_31_18_truecoreg.Rmd="8AD96A5F"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Fcorr_mtx_attempt.R="4A3B0ABA"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Fcorr_of_tmap_and_beta.Rmd="9756A7B1"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Fdemos.R="ED7F6F3D"
@@ -11,6 +12,7 @@
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Frsa_group_stats.R="ADF02F72"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Frsa_group_stats_10_24_18.Rmd="4047B25D"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Frsa_group_stats_10_24_18_badtmaps.Rmd="B06E7E6D"
+~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Frsa_group_stats_10_27_18_badtmaps_truecoreg.Rmd="A36406C4"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Frsa_group_stats_glasser.Rmd="D5F547B5"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Frsa_group_stats_markdown.Rmd="CA553E30"
 ~%2Fwalter%2Ffmri%2Fsms_scan_analyses%2Fbehavior%2Frstudio_sms_scan%2Frsa_sepPs_stats.R="C1ED9621"

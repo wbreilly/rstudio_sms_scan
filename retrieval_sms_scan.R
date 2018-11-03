@@ -5,16 +5,28 @@
 
 library(tidyverse)
 
-d = read.csv("~/drive/grad_school/DML_WBR/Sequences_Exp3/sms_scan_drive/sms_scan_fmri_copy/all_sms_scan_retreival_dat/all_sms_scan_retrieval_3_3_18.csv", 
-             na.strings="NaN", stringsAsFactors=FALSE)
-d = d %>% filter(sub != 8)
+d = read.csv("/Volumes/GoogleDrive/My Drive/grad_school/DML_WBR/Sequences_Exp3/sms_scan_drive/sms_scan_fmri_copy/all_sms_scan_retreival_dat/all_scan_retrieval_11_1_18.csv", na.strings="NaN", stringsAsFactors=FALSE)
 
+
+
+#get rid of column info for each block
+d = d[!(d$block == "" | d$block == "block"), ]
+
+
+# bad subs
+bad_subs = c('1', "8","16", "27","43","32","39","23") # , "s041"
+d$drop_subs = d$sub %in% bad_subs
+d = d[!(d$drop_subs == TRUE),]
+d[,13] = NULL
+
+# make it nice
 d$rt = as.numeric(d$rt)
 d$sub = as.numeric(d$sub)
 d$sub = as.factor(d$sub)
 
-#get rid of column info for each block
-d = d[!(d$block == "" | d$block == "block"), ]
+
+
+
 
 
 # add position info
@@ -290,79 +302,87 @@ d25 = dclean %>% filter(!position == 1)
 # p.pos.con
 # ######################################
 # # # # # # # # # # # # # # #
+
+
+# this is very old
+
 # condition means
 # This is so dumb
-sumstats.pos = dclean %>% group_by(con.num, position) %>% summarise(mean = mean(rt), SD = sd(rt))
-dclean[,4] = ifelse(dclean[,4] == "intact", "intact", ifelse(dclean[,4] == "scrambled", "scrambled","random"))
-dclean$condition = as.factor(dclean$condition)
+# sumstats.pos = dclean %>% group_by(con.num, position) %>% summarise(mean = mean(rt), SD = sd(rt))
+# dclean[,4] = ifelse(dclean[,4] == "intact", "intact", ifelse(dclean[,4] == "scrambled", "scrambled","random"))
+# dclean$condition = as.factor(dclean$condition)
+# 
+# sumstats.pos.se = dclean %>% group_by(con.num, sub,position) %>% summarise(mean = mean(rt))
+# # # get sample means
+# con1.pos1 = sumstats.pos.se %>% filter(con.num ==1, position == 1)
+# con1.pos2 = sumstats.pos.se %>% filter(con.num ==1, position == 2)
+# con1.pos3 = sumstats.pos.se %>% filter(con.num ==1, position == 3)
+# con1.pos4 = sumstats.pos.se %>% filter(con.num ==1, position == 4)
+# con1.pos5 = sumstats.pos.se %>% filter(con.num ==1, position == 5)
+# 
+# con2.pos1 = sumstats.pos.se %>% filter(con.num ==2, position == 1)
+# con2.pos2 = sumstats.pos.se %>% filter(con.num ==2, position == 2)
+# con2.pos3 = sumstats.pos.se %>% filter(con.num ==2, position == 3)
+# con2.pos4 = sumstats.pos.se %>% filter(con.num ==2, position == 4)
+# con2.pos5 = sumstats.pos.se %>% filter(con.num ==2, position == 5)
+# 
+# con3.pos1 = sumstats.pos.se %>% filter(con.num ==3, position == 1)
+# con3.pos2 = sumstats.pos.se %>% filter(con.num ==3, position == 2)
+# con3.pos3 = sumstats.pos.se %>% filter(con.num ==3, position == 3)
+# con3.pos4 = sumstats.pos.se %>% filter(con.num ==3, position == 4)
+# con3.pos5 = sumstats.pos.se %>% filter(con.num ==3, position == 5)
+# 
+# 
+# 
+# # get SD of sammple mean
+# sumstats.pos[1,4] = sd(con1.pos1$mean)
+# sumstats.pos[2,4] = sd(con1.pos2$mean)
+# sumstats.pos[3,4] = sd(con1.pos3$mean)
+# sumstats.pos[4,4] = sd(con1.pos4$mean)
+# sumstats.pos[5,4] = sd(con1.pos5$mean)
+# 
+# sumstats.pos[6,4] = sd(con2.pos1$mean)
+# sumstats.pos[7,4] = sd(con2.pos2$mean)
+# sumstats.pos[8,4] = sd(con2.pos3$mean)
+# sumstats.pos[9,4] = sd(con2.pos4$mean)
+# sumstats.pos[10,4] = sd(con2.pos5$mean)
+# 
+# sumstats.pos[11,4] = sd(con3.pos1$mean)
+# sumstats.pos[12,4] = sd(con3.pos2$mean)
+# sumstats.pos[13,4] = sd(con3.pos3$mean)
+# sumstats.pos[14,4] = sd(con3.pos4$mean)
+# sumstats.pos[15,4] = sd(con3.pos5$mean)
+# # # add SE
+# #
+# #
+# n = length(unique(dclean$sub))
+# sumstats.pos = mutate(sumstats.pos, SE = SD/sqrt(n))
+# # sumstats.pos[,1] = ifelse(sumstats.pos[,1] == "1", "Intact", ifelse(sumstats.pos[,1] == "2","Scrambled-Fixed", "Scrambled-Random"))
+# # save
+# sumstats.pos$exp = c(rep(2,15))
+# # write.csv(sumstats.pos, "sms_scan_retrieval_posplot.csv")
+# #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 sumstats.pos = data.frame(sumstats.pos)
+# sumstas.pos = sumstats.pos %>%  arrange(con.num )
+# # create a bar graph
+# limits <- aes(ymax = sumstats.pos$mean + sumstats.pos$SE,
+#               ymin = sumstats.pos$mean - sumstats.pos$SE)
+# 
+# p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(position), y = mean, fill = factor(position)))
+# p.pos.con = p.pos.con + geom_bar(stat = "identity",
+#                                  position = position_dodge(0.9)) +
+#   geom_errorbar(limits, position = position_dodge(0.9),
+#                 width = 0.15) +
+#   labs(x = NULL, y = "Reaction Time") +
+#   ggtitle("Event Schema Knowledge Faciliates Semantic Decisions")
+# + scale_x_discrete("Conditions", labels =    c("1" = "Intact", "2" = "Scrambled-Fixed", "3" = "Scrambled-Random")) #scale_fill_discrete(name = "Conditions")  #
+# p.pos.con = p.pos.con + coord_cartesian(ylim=c(550,1150)) + facet_wrap(~con.num) +  guides(fill = FALSE)
+# p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold",height = 6, width = 10))
+# #
+# p.pos.con
 
-sumstats.pos.se = dclean %>% group_by(con.num, sub,position) %>% summarise(mean = mean(rt))
-# # get sample means
-con1.pos1 = sumstats.pos.se %>% filter(con.num ==1, position == 1)
-con1.pos2 = sumstats.pos.se %>% filter(con.num ==1, position == 2)
-con1.pos3 = sumstats.pos.se %>% filter(con.num ==1, position == 3)
-con1.pos4 = sumstats.pos.se %>% filter(con.num ==1, position == 4)
-con1.pos5 = sumstats.pos.se %>% filter(con.num ==1, position == 5)
-
-con2.pos1 = sumstats.pos.se %>% filter(con.num ==2, position == 1)
-con2.pos2 = sumstats.pos.se %>% filter(con.num ==2, position == 2)
-con2.pos3 = sumstats.pos.se %>% filter(con.num ==2, position == 3)
-con2.pos4 = sumstats.pos.se %>% filter(con.num ==2, position == 4)
-con2.pos5 = sumstats.pos.se %>% filter(con.num ==2, position == 5)
-
-con3.pos1 = sumstats.pos.se %>% filter(con.num ==3, position == 1)
-con3.pos2 = sumstats.pos.se %>% filter(con.num ==3, position == 2)
-con3.pos3 = sumstats.pos.se %>% filter(con.num ==3, position == 3)
-con3.pos4 = sumstats.pos.se %>% filter(con.num ==3, position == 4)
-con3.pos5 = sumstats.pos.se %>% filter(con.num ==3, position == 5)
 
 
 
-# get SD of sammple mean
-sumstats.pos[1,4] = sd(con1.pos1$mean)
-sumstats.pos[2,4] = sd(con1.pos2$mean)
-sumstats.pos[3,4] = sd(con1.pos3$mean)
-sumstats.pos[4,4] = sd(con1.pos4$mean)
-sumstats.pos[5,4] = sd(con1.pos5$mean)
-
-sumstats.pos[6,4] = sd(con2.pos1$mean)
-sumstats.pos[7,4] = sd(con2.pos2$mean)
-sumstats.pos[8,4] = sd(con2.pos3$mean)
-sumstats.pos[9,4] = sd(con2.pos4$mean)
-sumstats.pos[10,4] = sd(con2.pos5$mean)
-
-sumstats.pos[11,4] = sd(con3.pos1$mean)
-sumstats.pos[12,4] = sd(con3.pos2$mean)
-sumstats.pos[13,4] = sd(con3.pos3$mean)
-sumstats.pos[14,4] = sd(con3.pos4$mean)
-sumstats.pos[15,4] = sd(con3.pos5$mean)
-# # add SE
-#
-#
-n = length(unique(dclean$sub))
-sumstats.pos = mutate(sumstats.pos, SE = SD/sqrt(n))
-# sumstats.pos[,1] = ifelse(sumstats.pos[,1] == "1", "Intact", ifelse(sumstats.pos[,1] == "2","Scrambled-Fixed", "Scrambled-Random"))
-# save
-sumstats.pos$exp = c(rep(2,15))
-# write.csv(sumstats.pos, "sms_scan_retrieval_posplot.csv")
-#                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 sumstats.pos = data.frame(sumstats.pos)
-sumstas.pos = sumstats.pos %>%  arrange(con.num )
-# create a bar graph
-limits <- aes(ymax = sumstats.pos$mean + sumstats.pos$SE,
-              ymin = sumstats.pos$mean - sumstats.pos$SE)
-
-p.pos.con <- ggplot(data = sumstats.pos, aes(x = factor(position), y = mean, fill = factor(position)))
-p.pos.con = p.pos.con + geom_bar(stat = "identity",
-                                 position = position_dodge(0.9)) +
-  geom_errorbar(limits, position = position_dodge(0.9),
-                width = 0.15) +
-  labs(x = NULL, y = "Reaction Time") +
-  ggtitle("Event Schema Knowledge Faciliates Semantic Decisions")
-+ scale_x_discrete("Conditions", labels =    c("1" = "Intact", "2" = "Scrambled-Fixed", "3" = "Scrambled-Random")) #scale_fill_discrete(name = "Conditions")  #
-p.pos.con = p.pos.con + coord_cartesian(ylim=c(550,1150)) + facet_wrap(~con.num) +  guides(fill = FALSE)
-p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold",height = 6, width = 10))
-#
-p.pos.con
 # ggsave("scan_retrieval_RTbyposition.pdf", plot = last_plot(), dpi = 600 )
 # 1150 X 750 doesn't work. Best would be to put all in one facet_grid figure
 # bring over exp 1 data
@@ -435,6 +455,8 @@ p.pos.con
 # ggsave("retrieval_plot_exp1_and_scan.eps", plot = last_plot(), dpi = 600 )
 
 #########################  another version of the position by condition plot
+
+
 sumstats.pos = dclean %>% group_by(con.num, sub,position) %>% summarise(origmean = mean(rt))
 sumstats.pos$pgroup = ifelse(sumstats.pos[,3] == "1", "Position 1", "Positions 2-5")
 sumstats.pos$pgroup = as.factor(sumstats.pos$pgroup)
@@ -474,7 +496,7 @@ p.pos.con = p.pos.con + coord_cartesian(ylim=c(600,1210)) + facet_grid(~exp) +  
 p.pos.con = p.pos.con + theme(text = element_text(size = 24, face = "bold")) + scale_y_continuous(breaks = c(600,700,800,900,1000,1100,1200))
 p.pos.con = p.pos.con + scale_fill_brewer(palette= "Dark2") + theme( axis.text.x = element_blank(), axis.ticks=element_blank())
 p.pos.con
- # ggsave("retrieval_plot_sfn2_3_3_18.eps", plot = last_plot(), dpi = 600 )
+ # ggsave("retrieval_plot_sfn_11_1_18.eps", plot = last_plot(), dpi = 600 )
 
 
 
@@ -861,12 +883,29 @@ rt.diffs = rt.diffs %>%  filter(sub != "8", condition != "random")
 rt.diffs = rt.diffs %>% spread(condition,rtmean)
 rt.diffs =  rt.diffs %>% mutate(rtdiff = scrambled - intact)
 rt.diffs = data.frame(rt.diffs)
+# write.csv(rt.diffs, "rtdiffs_11_1_18.csv")
+
+# d25[,4] = ifelse(d25[,4] == "intact", "intact", ifelse(d25[,4] == "scrambled", "scrambled","random"))
+# d25$condition = as.factor(d25$condition)
+# rt.diffs = d25 %>% group_by(sub,condition) %>%  summarise(rtmean = mean(rt))
+# rt.diffs = rt.diffs %>%  filter(sub != "8", condition == "intact")
+# # rt.diffs = rt.diffs %>% spread(condition,rtmean)
+# # rt.diffs =  rt.diffs %>% mutate(rtdiff = scrambled - intact)
+# rt.intact = data.frame(rt.diffs)
+# 
+# d25[,4] = ifelse(d25[,4] == "intact", "intact", ifelse(d25[,4] == "scrambled", "scrambled","random"))
+# d25$condition = as.factor(d25$condition)
+# rt.diffs = d25 %>% group_by(sub,condition) %>%  summarise(rtmean = mean(rt))
+# rt.diffs = rt.diffs %>%  filter(sub != "8", condition == "scrambled")
+# # rt.diffs = rt.diffs %>% spread(condition,rtmean)
+# # rt.diffs =  rt.diffs %>% mutate(rtdiff = scrambled - intact)
+# rt.scrambled = data.frame(rt.diffs)
 
 # # diff between intact and RANDOM rts for every subject 
-d25[,4] = ifelse(d25[,4] == "intact", "intact", ifelse(d25[,4] == "scrambled", "scrambled","random"))
-d25$condition = as.factor(d25$condition)
-rt.diffs.rand = d25 %>% group_by(sub,condition) %>%  summarise(rtmean = mean(rt))
-rt.diffs.rand = rt.diffs.rand %>%  filter(sub != "8", condition != "scrambled")
-rt.diffs.rand = rt.diffs.rand %>% spread(condition,rtmean)
-rt.diffs.rand =  rt.diffs.rand %>% mutate(rtdiff = random - intact)
-rt.diffs.rand = data.frame(rt.diffs.rand)
+# d25[,4] = ifelse(d25[,4] == "intact", "intact", ifelse(d25[,4] == "scrambled", "scrambled","random"))
+# d25$condition = as.factor(d25$condition)
+# rt.diffs.rand = d25 %>% group_by(sub,condition) %>%  summarise(rtmean = mean(rt))
+# rt.diffs.rand = rt.diffs.rand %>%  filter(sub != "8", condition != "scrambled")
+# rt.diffs.rand = rt.diffs.rand %>% spread(condition,rtmean)
+# rt.diffs.rand =  rt.diffs.rand %>% mutate(rtdiff = random - intact)
+# rt.diffs.rand = data.frame(rt.diffs.rand)
