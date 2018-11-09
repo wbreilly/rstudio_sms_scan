@@ -1,0 +1,1141 @@
+---
+title: "rsa_group_stats_10_24_18"
+author: "WBR"
+date: "10/24/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(out.width = "70%")
+```
+
+## Load and prepare data 
+
+```{r}
+# RSA sum stats
+library(tidyverse)
+library(afex)
+library(ggforce)
+library('emmeans')
+
+
+
+# SVSS with positions and beta threshold
+rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/RSAmeans_fir_10_31_18_5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+
+# noisiest subject
+bad_subs = c('s001', "s008","s016", "s027","s043","s032","s039") # , "s041"
+rsa$drop_subs = rsa$sub %in% bad_subs
+rsa = rsa[!(rsa$drop_subs == TRUE),]
+
+# s022 rh-prc is messed up, 20 most negatvie correlations in whole dataset. NA all of those for time being
+# rsa$too_low = rsa$similarity < -.4
+# rsa = rsa[!(rsa$too_low == TRUE),]
+# ## a couple that are 1 somehow..
+# rsa$too_high = rsa$similarity > .8
+# rsa = rsa[!(rsa$too_high == TRUE),]
+       
+rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity)) %>% ungroup()
+
+
+# the rois
+PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole', 'lh-OFC', 'rh-OFC')
+HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 'near-hipp-tail-L', 'near-hipp-tail-R')
+PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
+                 'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+IFG= c( 'lh-inf-opercular', 'lh-inf-triang', 'rh-inf-opercular', 'rh-inf-triang', 'rh-inf-orbital', 'lh-inf-orbital')
+frontal = c( 'lh-inf-opercular', 'lh-inf-triang', 'rh-inf-opercular', 'rh-inf-triang', 'rh-inf-orbital', 'lh-inf-orbital','rh-insula-inf','lh-insula-inf','rh-insula-short','lh-insula-short','lh-VMPFC','rh-VMPFC','lh-MPFC','rh-MPFC','rh-MTG','lh-MTG','rh-OFC','lh-OFC')
+# 'lh-insula-short', 'lh-insula-inf','rh-insula-short', 'rh-insula-inf', 
+# vmpfc = c('near-VMPFC') 
+
+
+
+
+# make networks factor
+# first make logical vectors for member regions
+rsa$PM = rsa$roi %in% PM_rois
+rsa$AT = rsa$roi %in% AT_rois
+rsa$HIPP = rsa$roi %in% HIPP_rois
+rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
+rsa$IFG = rsa$roi %in% IFG
+rsa$frontal = rsa$roi %in% frontal
+
+# now assign group label in single column
+# rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
+rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", ifelse(rsa$IFG == TRUE, "IFG","Other"))))
+# delete the logical vectors
+rsa[,6:11] = NULL
+# make group a factor
+rsa$roi_group = as.factor(rsa$roi_group)
+
+# wish I did this earlier but hindsight yada yada
+rsa$roi = gsub(".*body-L$", "lh-hipp-body", rsa$roi)
+rsa$roi = gsub(".*body-R$", "rh-hipp-body", rsa$roi)
+rsa$roi = gsub(".*head-L$", "lh-hipp-head", rsa$roi)
+rsa$roi = gsub(".*head-R$", "rh-hipp-head", rsa$roi)
+rsa$roi = gsub(".*tail-L$", "lh-hipp-tail", rsa$roi)
+rsa$roi = gsub(".*tail-R$", "rh-hipp-tail", rsa$roi)
+rsa$roi = gsub(".*ant-L$", "lh-phc-ant", rsa$roi)
+rsa$roi = gsub(".*ant-R$", "rh-phc-ant", rsa$roi)
+# rsa$roi = gsub(".*VMPFC", "VMPFC", rsa$roi)
+rsa$roi = gsub(".*prc-L$", "lh-prc", rsa$roi)
+rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
+########################
+# PMAT AT and HIPP only
+rsa.PMAT = rsa %>% filter(roi_group != "Other") %>% filter(roi_group != "IFG")  %>% filter(roi_group != "frontal")
+rsa.frontal = rsa %>% filter(rsa$frontal == TRUE)
+
+
+# rt  diffs
+rt.diffs =  read.csv("rtdiffs_11_1_18.csv")
+rt.diffs[,1] =NULL 
+
+
+# nice labels
+PM_labs = c('lh-phc-ant', 'rh-phc-ant', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
+AT_labs = c('lh-prc',	'rh-prc', 	'lh-TPole', 	'rh-TPole', 'lh-OFC', 'rh-OFC')
+HIPP_labs = c('lh-hipp-body','rh-hipp-body','lh-hipp-head','rh-hipp-head','lh-hipp-tail','rh-hipp-tail')
+
+```
+
+```{r}
+
+
+
+```
+
+
+
+
+## Plot by network cluster
+
+```{r fig.width = 12, fig.asp = .62}
+clust.fig.dat = rsa.PMAT %>% filter(position == 1) %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
+clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.05, .35))
+clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled"))
+clusters.rois
+```
+```{r}
+rsa.PM = rsa %>% filter(roi_group == "PM")
+line.dat = rsa.PMAT  %>% filter(roi == "rh-Prec")%>%  group_by(condition,position) %>% summarise(similarity = mean(similarity))
+
+
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity))   + geom_smooth(aes(linetype=condition),method="loess") # + facet_wrap(~roi)# + scale_y_continuous(limits = c(-.05, .3))
+# PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled")) 
+PM.line
+
+```
+
+### facet line plots
+
+```{r}
+
+rsa.PM = rsa %>% filter(rsa$roi == "lh-occ-pole" | rsa$roi == "rh-occ-pole")
+line.dat = rsa.PM  %>% group_by(condition,position,roi) %>% summarise(similarity = mean(similarity))
+
+
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) + facet_wrap(~roi) 
+  # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+  
+PM.line
+
+```
+
+### paginate line plots
+```{r}
+
+
+
+for (ipage in 1:3) {
+rsa.PM = rsa %>% filter(rsa$frontal == TRUE)
+line.dat = rsa.PM  %>% group_by(condition,position,roi) %>% summarise(similarity = mean(similarity))
+
+
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) + facet_wrap_paginate(~roi,nrow=3,ncol=2,page = ipage) 
+  # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+  fname = sprintf("PFCish_fir_5ptile_11_1_18_%d.pdf", ipage) 
+  ggsave(fname)
+}
+```
+
+### poster quality line plots
+```{r}
+
+post_rois = c("lh-Prec","rh-Prec", "lh-occ-pole", "rh-occ-pole","lh-MTG","lh-inf-triang","lh-inf-opercular","lh-inf-orbital","rh-MPFC","rh-ANG","lh-ANG","lh-phc-ant","rh-phc-ant")
+
+for (iroi in 1:length(post_rois)) {
+# rsa.PM = rsa %>% filter(rsa$frontal == TRUE)
+line.dat = rsa %>%  filter(roi == post_rois[iroi]) %>% filter(condition != "random") %>%  group_by(condition,position) %>% summarise(similarity = mean(similarity)) 
+
+
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity, colour = condition)) + geom_line(size = 2) +geom_point(size = 2) # aes(linetype=condition) 
+PM.line = PM.line + scale_color_brewer(palette = "Dark2") + theme(text = element_text(size = 30, face = "bold")) + theme(strip.background = element_blank(),strip.text= element_blank()) + theme(legend.position="none") + xlab("timepoint")
+PM.line
+
+# + scale_color_manual(values = c("1B9E77","D95F02","7570B3"))
+#+  facet_wrap_paginate(~roi,nrow=3,ncol=2,page = ipage) 
+  # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+
+  fname = sprintf("sfn18_figs/%s_timcourse.pdf", post_rois[iroi])
+  ggsave(fname, plot = PM.line, dpi = 600,width = 8, height = 5,units = "in")
+}
+```
+
+
+
+
+#### subject level line plots
+
+```{r}
+
+indie.sub.plots = function(cur_sub,region){
+rsa.PM = rsa %>% filter(rsa$roi == region)
+line.dat = rsa.PM %>% filter(sub == cur_sub) %>% group_by(condition,position) %>% summarise(similarity = mean(similarity))
+
+
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) # + facet_wrap(~sub) 
+  # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+  
+PM.line
+}
+```
+
+```{r}
+lapply(unique(rsa$sub),indie.sub.plots, region = "rh-Prec")
+
+
+```
+
+
+
+```{r}
+# %>%  filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5)
+clust.fig.dat = rsa %>% filter(roi =="lh-ANG") %>% filter(condition != "random")  %>% filter(position %in% 1:25)  %>% group_by(sub,condition,position) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+clust.fig.dat = droplevels(clust.fig.dat)
+# clust.fig.dat$roi = as.factor(clust.fig.dat$roi)
+a1 = aov_ez("sub", "similarity", clust.fig.dat, within = c("condition","position"))
+a1
+em1 = emmeans(a1, ~ condition)
+pairs(em1, adjust = NULL)
+# contrast(ls.m1, alpha=0.05, method="pairwise", adjust= "holm")
+
+
+# only intact and scrambled and positions 1:25
+  # lh-inf-opercular trending main effect of condition (p = .08), main effect of position (p < .0001), no interaction
+  # lh-inf-triang, main effect of position, marginal interaction
+  # lh-inf-orbital, main effect of condition (p = .04), main effect of position (p < .0001), no interaction  
+  # lh-Prec main effect of position (p < .0001) and condition*position interaction (p =.002)
+  # rh-Prec main effect of position (p < .0001) and  trending condition*position interaction (p =.07)
+  # rh-MPFC main effect of condition p = .04, main effect of position, no interaction
+  # lh-occ-pole only main effect of position
+  # rh-occpole main effect of position and trending interaction...p = .06. top down prediction ??
+  # lh-ANG has marginal condition*position interaction p = .11
+  
+```
+
+```{r}
+clust.fig.dat = rsa.PMAT %>% filter(roi =="lh-Prec") %>% filter(condition == "intact") %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+clust.fig.dat = droplevels(clust.fig.dat)
+intactdat = clust.fig.dat$similarity
+
+clust.fig.dat = rsa.PMAT %>% filter(roi =="lh-Prec") %>% filter(condition == "scrambled") %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+clust.fig.dat = droplevels(clust.fig.dat)
+scrambleddat = clust.fig.dat$similarity
+
+t.test(intactdat, scrambleddat, paired = TRUE)
+
+
+```
+
+```{r}
+
+wbr.first5ps.ttest = function(region,df,con1,con2) {
+  temp.df = df %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat1 = temp.df$similarity
+
+temp.df = df %>% filter(roi == region) %>% filter(condition == con2) %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat2 = temp.df$similarity
+if (length(dat1) == length(dat2)){
+  print(region)
+  out = t.test(dat1, dat2, paired = TRUE)
+  return(out)
+} else {
+  fprint('problem with %s !!!',region )
+}
+}
+
+
+```
+
+```{r}
+# roi.list = list(unique(rsa.PM$roi))
+# for (iroi in PM_rois){
+# wbr.first5ps.ttest(rsa,,'intact','scrambled')
+# }
+
+the_rois = c('lh-Prec', 'rh-Prec')
+
+lapply(HIPP_labs, wbr.first5ps.ttest, df=rsa,con1='intact',con2='scrambled')
+
+```
+
+# sliding window ttests!
+################################
+```{r}
+
+wbr.sliding.ttest = function(midval,region,winval,con1,con2) {
+  temp.df = rsa %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat1 = temp.df$similarity
+
+temp.df = rsa %>% filter(roi == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat2 = temp.df$similarity
+if (length(dat1) == length(dat2)){
+  print(region)
+  result = t.test(dat1, dat2, paired = TRUE)
+  pval = result$p.value
+  tval = result$statistic
+# pval = sprintf('%.3f',as.numeric(fromcor[3]))
+# rval = sprintf('%.3f',as.numeric(fromcor[4]))
+
+  out = c(pval,tval)
+  return(out)
+  
+} else {
+  fprint('problem with %s !!!',region )
+}
+}
+```
+
+```{r}
+tstatdat = lapply(1:32,wbr.sliding.ttest,winval=2,region="lh-MTG",con1="intact",con2="scrambled")
+tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
+tstatdat$timepoint = 1:32
+tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
+
+#plot that shit
+tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  +
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-2.25 , 3.5),breaks = c(-2,-1,0,1,2,3))
+# +
+  # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
+#   geom_segment(x = 29,y =-.25,xend= 29,yend = .25, color = "red",size=.75) +
+#   geom_segment(x = 28,y =-.25,xend= 28,yend = .25, color = "red",size=.75) +
+#   geom_segment(x = 30,y =-.25,xend= 30,yend = .25, color = "red",size=.75) +
+#   geom_segment(x = 31,y =-.25,xend= 31,yend = .25, color = "red",size=.75) 
+
+
+tstat.plot
+# ggsave("sfn18_figs/sliding.tstat_lh-MTG.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+
+# lh-Prec sig ttest at p1-p6
+```
+
+
+
+
+```{r}
+
+# 21/27 subs have higher PS for intact compared to scrambled in lh-Prec
+# 21/27 subs have higher PS for intact compared to scrambled in rh-Prec, but not the exact same as above
+
+temp.df = rsa %>% filter(roi == "lh-Prec") %>% filter(condition == "intact") %>%    filter(position %in% 11:16) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat1 = temp.df$similarity
+
+temp.df = rsa %>% filter(roi == "lh-Prec") %>% filter(condition == "scrambled") %>%   filter(position %in% 11:16) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat2 = temp.df$similarity
+
+dat1 - dat2
+mean(dat1 - dat2)
+
+# 12/27 have higher similarity in rh-Prec in times 11:16
+# only 7 in lh-prec
+
+```
+
+
+
+```{r}
+wbr.allps.ttest = function(region,df,con1,con2) {
+  temp.df = df %>% filter(roi == region)  %>% filter(condition == con1) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat1 = temp.df$similarity
+
+temp.df = df %>% filter(roi == region) %>% filter(condition == con2) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat2 = temp.df$similarity
+if (length(dat1) == length(dat2)){
+  print(region)
+  out = t.test(dat1, dat2, paired = TRUE)
+  return(out)
+} else {
+  fprint('problem with %s !!!',region )
+}
+}
+
+
+```
+
+```{r}
+
+
+lapply(HIPP_labs, wbr.allps.ttest, df=rsa,con1='intact',con2='random')
+
+
+
+```
+
+
+```{r}
+wbr.last5ps.ttest = function(region,df,con1,con2) {
+  temp.df = df %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position == 21 |  position == 22 |position == 23 | position == 24 | position == 25) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat1 = temp.df$similarity
+
+temp.df = df %>% filter(roi == region) %>% filter(condition == con2) %>%   filter(position == 21 |  position == 22 |position == 23 | position == 24 | position == 25) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat2 = temp.df$similarity
+if (length(dat1) == length(dat2)){
+  print(region)
+  out = t.test(dat1, dat2, paired = TRUE)
+  return(out)
+} else {
+  fprint('problem with %s !!!',region )
+}
+}
+```
+
+
+```{r}
+
+lapply(HIPP_labs, wbr.last5ps.ttest, df=rsa,con1='intact',con2='random')
+
+# FOR LAST 5 PS
+#left inf operc P = .04
+# left inf trian p = .05
+# rh-MPFC is not sig
+# HIpp had a couple ps = .10
+# pm has nada
+#  at has nada
+
+# intact > random in right hipp head p = .03 
+
+
+```
+
+
+## correlations
+```{r}
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>%  group_by(sub,condition,roi) %>% filter(roi == "lh-hipp-body", condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+cor.test(rsa.diff.ps$rtdiffs,rsa.diff.ps$psdiffs)
+
+# positive rt means faster on intact than scrambled 
+# positive ps means higher ps for intact 
+
+corr.plot = ggplot(data = rsa.diff.ps,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 5) +   geom_smooth(method='lm')
+corr.plot = corr.plot + ggtitle("r = 0.46, p = 0.02")  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
+corr.plot = corr.plot + theme(text = element_text(size = 30, face = "bold"))
+corr.plot.phc = corr.plot
+corr.plot.phc 
+# ggsave("lh_hipp_body_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+
+
+```
+
+
+
+
+
+```{r}
+
+rsa.diff.ps = rsa %>% filter(sub != "s023")
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% 1:25) %>%  group_by(sub,condition,roi) %>% filter(roi == "rh-Prec", condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
+write.csv(rsa.diff.ps,"rh-precdiffplot.csv")
+
+
+
+```
+
+
+```{r}
+
+lapply(unique(rsa$roi),wbr.first5.corrplot)
+
+```
+
+
+##### corr plot last 5
+
+```{r}
+
+wbr.last5.corrplot = function(region) {
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+# 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position == 21 |  position == 22 |position == 23 | position == 24 | position == 25) %>% group_by(sub,condition,roi) %>% filter(roi == region, condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+fromcor = cor.test(rsa.diff.ps$rtdiffs,rsa.diff.ps$psdiffs)
+
+if (fromcor[3] > .05){
+return()
+}
+
+pval = sprintf('\np = %.3f;\n',as.numeric(fromcor[3]))
+rval = sprintf('r = %.3f',as.numeric(fromcor[4]))
+# positive rt means faster on intact than scrambled 
+# positive ps means higher ps for intact 
+
+corr.plot = ggplot(data = rsa.diff.ps,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 5) +   geom_smooth(method='lm')
+corr.plot = corr.plot + ggtitle(paste(region,pval,rval))  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
+corr.plot = corr.plot + theme(text = element_text(size = 20, face = "bold"))
+corr.plot.phc = corr.plot
+corr.plot.phc 
+# ggsave("lh_hipp_body_diff_corr.pdf", plot = last_plot(), dpi = 600 )
+}
+
+```
+
+
+```{r}
+
+lapply(unique(rsa$roi),wbr.last5.corrplot)
+
+```
+
+##### corr middle 15
+
+```{r}
+
+wbr.anyps.corrplot = function(region,pstart,pend) {
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+# 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% pstart:pend) %>% group_by(sub,condition,roi) %>% filter(roi == region, condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+fromcor = cor.test(rsa.diff.ps$rtdiffs,rsa.diff.ps$psdiffs)
+
+if (fromcor[3] > .05){
+return()
+}
+
+# region = "L Precuneus"
+pval = sprintf('p = %.3f;',as.numeric(fromcor[3]))
+rval = sprintf('r = %.3f;',as.numeric(fromcor[4]))
+prange = sprintf('Timepoint %d to %d',pstart,pend)
+# positive rt means faster on intact than scrambled 
+# positive ps means higher ps for intact 
+
+ 
+corr.plot = ggplot(data = rsa.diff.ps,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 3) +   geom_smooth(method='lm')
+corr.plot = corr.plot  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference") + xlim(min=-.2, max=.21) + geom_hline(yintercept = 0) + geom_vline(xintercept = 0) + ggtitle(paste(region,pval,rval,prange))
+corr.plot = corr.plot + theme(text = element_text(size = 25, face = "bold"))
+corr.plot
+# 
+
+ggsave(sprintf('sfn18_figs/%s_intact-scrambled_corrplot_pstart%dpend%d.pdf',region,pstart,pend), plot = corr.plot, dpi = 600,width = 8, height = 5.5,units = "in")
+}
+
+```
+
+
+```{r}
+wbr.anyps.corrplot(region="lh-Prec",pstart =11,pend=16)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =1,pend=25)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =11,pend=20)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =6,pend=20)
+
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =1,pend=12)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =13,pend=25)
+
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =1,pend=8)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =9,pend=16)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =17,pend=25)
+
+# lapply(unique(rsa$roi),wbr.last5.corrplot,pstart =1,pend=5)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =6,pend=10)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =11,pend=15)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =16,pend=20)
+# lapply(unique(rsa$roi),wbr.anyps.corrplot,pstart =21,pend=25)
+
+```
+
+##### corr intact with ps
+
+```{r}
+
+wbr.intactonly.corrplot = function(region,pstart,pend) {
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+# 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% pstart:pend) %>% group_by(sub,condition,roi) %>% filter(roi == region, condition == "intact") %>% summarise(simmean = mean(similarity))
+# rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+# rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$intactrt = rt.intact$rtmean
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+fromcor = cor.test(rsa.diff.ps$intactrt,rsa.diff.ps$simmean)
+
+if (fromcor[3] > .05){
+return()
+}
+
+pval = sprintf('p = %.3f;',as.numeric(fromcor[3]))
+rval = sprintf('r = %.3f;',as.numeric(fromcor[4]))
+prange = sprintf('Reg %d to %d',pstart,pend)
+# positive rt means faster on intact than scrambled 
+# positive ps means higher ps for intact 
+
+corr.plot = ggplot(data = rsa.diff.ps,(aes(x = simmean, y= intactrt)))  + geom_point(size = 5) +   geom_smooth(method='lm')
+corr.plot = corr.plot + ggtitle(paste(region,pval,rval,prange))  + theme(legend.position="none") + labs(x = "Intact PS", y = "Intact PS (ms)")
+corr.plot = corr.plot + theme(text = element_text(size = 15, face = "bold"))
+corr.plot
+ggsave(sprintf('%s_intactonly_corrplot_pstart%dpend%d.pdf',region,pstart,pend), plot = last_plot(), dpi = 600 )
+}
+
+```
+
+```{r}
+
+
+# lapply(unique(rsa$roi),wbr.intactonly.corrplot,pstart =1,pend=25)
+lapply(unique(rsa$roi),wbr.intactonly.corrplot,pstart =1,pend=5)
+lapply(unique(rsa$roi),wbr.intactonly.corrplot,pstart =6,pend=10)
+lapply(unique(rsa$roi),wbr.intactonly.corrplot,pstart =11,pend=15)
+lapply(unique(rsa$roi),wbr.intactonly.corrplot,pstart =16,pend=20)
+lapply(unique(rsa$roi),wbr.intactonly.corrplot,pstart =21,pend=25)
+
+```
+
+
+##### corr scrambled with ps
+
+```{r}
+
+wbr.scrambledonly.corrplot = function(region,pstart,pend) {
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+# 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% pstart:pend) %>% group_by(sub,condition,roi) %>% filter(roi == region, condition == "scrambled") %>% summarise(simmean = mean(similarity))
+# rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+# rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$scrambledrt = rt.scrambled$rtmean
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+fromcor = cor.test(rsa.diff.ps$scrambledrt,rsa.diff.ps$simmean)
+
+if (fromcor[3] > .05){
+return()
+}
+
+pval = sprintf('p = %.3f;',as.numeric(fromcor[3]))
+rval = sprintf('r = %.3f;',as.numeric(fromcor[4]))
+prange = sprintf('Reg %d to %d',pstart,pend)
+# positive rt means faster on intact than scrambled 
+# positive ps means higher ps for intact 
+
+corr.plot = ggplot(data = rsa.diff.ps,(aes(x = simmean, y= scrambledrt)))  + geom_point(size = 5) +   geom_smooth(method='lm')
+corr.plot = corr.plot + ggtitle(paste(region,pval,rval,prange))  + theme(legend.position="none") + labs(x = "Scrambled PS", y = "Scrambled PS (ms)")
+corr.plot = corr.plot + theme(text = element_text(size = 15, face = "bold"))
+corr.plot
+ggsave(sprintf('%s_scrambledonly_corrplot_pstart%dpend%d.pdf',region,pstart,pend), plot = last_plot(), dpi = 600 )
+}
+
+```
+
+```{r}
+
+
+# lapply(unique(rsa$roi),wbr.intactonly.corrplot,pstart =1,pend=25)
+lapply(unique(rsa$roi),wbr.scrambledonly.corrplot,pstart =1,pend=5)
+lapply(unique(rsa$roi),wbr.scrambledonly.corrplot,pstart =6,pend=10)
+lapply(unique(rsa$roi),wbr.scrambledonly.corrplot,pstart =11,pend=15)
+lapply(unique(rsa$roi),wbr.scrambledonly.corrplot,pstart =16,pend=20)
+lapply(unique(rsa$roi),wbr.scrambledonly.corrplot,pstart =21,pend=25)
+
+```
+
+
+#### corr every time point
+
+```{r}
+pvalues = c()
+
+wbr.intacteachp.corrplot = function(region,psta) {
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+# 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% pstart:pend) %>% group_by(sub,condition,roi) %>% filter(roi == "lh-hipp-body", condition == "intact") %>% summarise(simmean = mean(similarity))
+# rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+# rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$intactrt = rt.intact$rtmean
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+fromcor = cor.test(rsa.diff.ps$intactrt,rsa.diff.ps$simmean)
+
+
+c(pvalues,fromcor[3])
+# c(rvalues,fromcor[4])
+# if (fromcor[3] > .05){
+# return()
+# }
+# 
+# pval = sprintf('p = %.3f;',as.numeric(fromcor[3]))
+# rval = sprintf('r = %.3f;',as.numeric(fromcor[4]))
+# prange = sprintf('Reg %d to %d',pstart,pend)
+# positive rt means faster on intact than scrambled 
+# positive ps means higher ps for intact 
+
+# corr.plot = ggplot(data = rsa.diff.ps,(aes(x = simmean, y= intactrt)))  + geom_point(size = 5) +   geom_smooth(method='lm')
+# corr.plot = corr.plot + ggtitle(paste(region,pval,rval,prange))  + theme(legend.position="none") + labs(x = "Intact PS", y = "Intact PS (ms)")
+# corr.plot = corr.plot + theme(text = element_text(size = 15, face = "bold"))
+# corr.plot
+# ggsave(sprintf('%s_intactonly_corrplot_pstart%dpend%d.pdf',region,pstart,pend), plot = last_plot(), dpi = 600 )
+}
+
+```
+
+
+```{r}
+
+lapply(1:32,wbr.intacteachp.corrplot)
+```
+
+
+# sliding time window ?????
+```{r}
+
+da_ps = c()
+
+wbr.window.corrplot = function(midval,region,winval) {
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+# 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub,condition,roi) %>% filter(roi == region, condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+fromcor = cor.test(rsa.diff.ps$rtdiffs,rsa.diff.ps$psdiffs)
+
+pval = fromcor$p.value
+rval = fromcor$estimate
+# pval = sprintf('%.3f',as.numeric(fromcor[3]))
+# rval = sprintf('%.3f',as.numeric(fromcor[4]))
+
+out = c(pval,rval)
+return(out)
+
+}
+
+```
+
+
+```{r}
+# lapply(1:32,wbr.window.corrplot,winval = 5,region="lh-Prec")
+corrdat = lapply(1:32,wbr.window.corrplot,winval = 2,region="rh-MPFC") # holy cow 7 sig timepoints
+corrdat = data.frame(matrix(unlist(corrdat), nrow=32, byrow=T))
+corrdat$timepoint = 1:32
+corrdat = plyr::rename(corrdat, c("X1"="pval","X2"="rval"))
+```
+
+```{r}
+corr.plot = ggplot(data = corrdat,(aes(x =timepoint , y= rval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("Pearson's r") + 
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits = c(-.3,.5)) 
+  # geom_segment(x = 2,y =-.05,xend= 2,yend = .05, color = "red",size=.75) +
+  # geom_segment(x = 3,y =-.05,xend= 3,yend = .05, color = "red",size=.75) +
+  # geom_segment(x = 4,y =-.05,xend= 4,yend = .05, color = "red",size=.75) +
+  # geom_segment(x = 5,y =-.05,xend= 5,yend = .05, color = "red",size=.75) 
+  # geom_segment(x = 13,y =-.05,xend= 13,yend = .05, color = "red",size=.75) +
+
+corr.plot
+# ggsave("sfn18_figs/slidingcorrplot_all-lefthipp.pdf", plot = corr.plot, dpi = 600,width = 8, height = 5,units = "in")
+## 11-16 are sig
+```
+
+# merge the HIPP
+# sliding time window ?????
+```{r}
+
+da_ps = c()
+
+wbr.mergehipp.corrplot = function(midval,winval) {
+rsa.diff.ps = rsa %>% filter(sub != "s023") 
+# 
+
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub,condition,roi) %>% filter(roi == "rh-hipp-body" | roi == "rh-hipp-tail" | roi == "rh-hipp-head" , condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
+rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
+rsa.diff.ps = data.frame(rsa.diff.ps)
+
+rsa.diff.ps$rtdiffs = rt.diffs$rtdiff
+
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s034")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s009")
+# rsa.diff.ps = rsa.diff.ps %>% filter(sub != "s018")
+
+fromcor = cor.test(rsa.diff.ps$rtdiffs,rsa.diff.ps$psdiffs)
+
+pval = sprintf('%.3f',as.numeric(fromcor[3]))
+rval = sprintf('%.3f',as.numeric(fromcor[4]))
+
+out = c(pval,rval)
+return(out)
+
+
+}
+
+```
+
+
+```{r}
+
+corrdat = lapply(1:32,wbr.mergehipp.corrplot,winval = 2) # 
+corrdat = data.frame(matrix(unlist(corrdat), nrow=32, byrow=T))
+corrdat$timepoint = 1:32
+corrdat = plyr::rename(corrdat, c("X1"="pval","X2"="rval"))
+```
+
+```{r}
+corr.plot = ggplot(data = corrdat,(aes(x =timepoint , y= rval,group =1)))  + geom_point(size = 5)    
+# corr.plot = corr.plot + ggtitle(paste(region,pval,rval,prange))  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference (ms)")
+# corr.plot = corr.plot + theme(text = element_text(size = 15, face = "bold"))
+corr.plot
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Full within subject network*condition ANOVA with follow-up holm-corrected paired contrasts
+
+```{r}
+
+a1 = aov_ez("sub", "similarity", rsa.frontal, within = c("condition", "roi"))
+a1
+em1 = emmeans(a1, ~ condition|roi)
+pairs(em1, adjust = NULL)
+```
+
+
+```{r}
+rsa.select = rsa %>% filter(roi == "lh-MPFC" | roi == "rh-MPFC") %>%  group_by(condition,sub,roi) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+rsa.select = droplevels(rsa.select)
+a1 = aov_ez("sub", "similarity", rsa.select, within = c("condition", "roi"))
+a1
+em1 = emmeans(a1, ~ condition|roi)
+em1
+pairs(em1, adjust = NULL)
+```
+
+
+## Make roi groups
+
+```{r}
+rsa.PM = rsa %>% filter(roi_group == "PM")
+rsa.AT = rsa %>% filter(roi_group == "AT")
+rsa.HIPP = rsa %>% filter(roi_group == "HIPP")
+```
+
+## Separate network plots
+
+```{r fig.width = 12, fig.asp = .62}
+
+pm.fig.dat = rsa.PMAT %>%  filter(roi_group == "PM") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .3))
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled")) 
+PM.check
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+at.fig.dat = rsa.PMAT %>%  filter(roi_group == "AT") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+AT.check = ggplot(data = at.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .3))
+AT.check = AT.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled"))
+AT.check
+# ggsave("at.all.pdf", plot = last_plot(), dpi = 600 )
+
+#HIPP
+# hipp.fig.dat = rsa.PMAT %>%  filter(roi_group == "HIPP") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+# hipp.check = ggplot(data = hipp.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .17))
+# hipp.check = hipp.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+# hipp.check
+# # ggsave("at.all.pdf", plot = last_plot(), dpi = 600 )
+
+```
+
+## Which PM ROIs drive effects
+# Earlier observed that r_sameverb differeed from all other conditions in PM network 
+# ROI*condition ANOVA indicated significant main effects of condition and roi, and a trending interaction
+# Follow up contrasts indicate that r_sameverb is significantly different from at least one other condition in:
+# lh-ANG,rh-ANG,lh-PCC,lh-Prec,rh-Prec
+# Next will plot rh-Prec as representative region
+
+
+```{r}
+m1.PM = aov_ez("sub", "similarity", rsa.PM, within = c("condition", "roi"))
+m1.PM
+ls.PM = lsmeans(m1.PM,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.PM
+contrast(ls.PM, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+ 
+```{r}
+pm.fig.dat = rsa %>%  filter(roi == "rh-Prec") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .3))
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled")) 
+PM.check
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+
+
+# rsa.PM.example = rsa %>% filter(roi == "rh-Prec")
+# PM.plot = ggplot(data = rsa.PM.example, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+# PM.plot = PM.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+# PM.plot
+# ggsave("rh-prec.pdf", plot = last_plot(), dpi = 600 )
+```
+
+## Which AT ROIs drive effects
+# Earlier we saw that intact and r_sameverb are different in AT (p = .03) and intact and scrambled are different (p = .04)
+# Which ROIs drive that effect? Curiously this second ANOVA is trending for a main effect of condition...?
+# Effect is driven by prc with, r-prc trending for difference between intact and r_samverb (p = .09) and intact and scrambled (p = .09)
+
+```{r}
+m1.AT = aov_ez("sub", "similarity", rsa.AT, within = c("condition", "roi"))
+m1.AT
+ls.AT = lsmeans(m1.AT,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.AT
+contrast(ls.AT, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+
+
+```{r}
+at.fig.dat = rsa %>%  filter(roi == "rh-prc") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+at.check = ggplot(data = at.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.1, .3))
+at.check = at.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+at.check
+# ggsave("pm.all.pdf", plot = last_plot(), dpi = 600 )
+
+
+# rsa.AT.example = rsa %>% filter(roi == "rh-prc")
+# AT.plot = ggplot(data = rsa.AT.example, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+# AT.plot = AT.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+# AT.plot
+```
+
+## Which ROIs in HIPP are doing anything
+
+```{r}
+m1.HIPP = aov_ez("sub", "similarity", rsa.HIPP, within = c("condition","roi"))
+m1.HIPP
+ls.HIPP = lsmeans(m1.HIPP,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.HIPP
+contrast(ls.HIPP, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+## plot left hipp body
+
+```{r}
+rsa.HIPP.example = rsa %>% filter(roi_group == "HIPP") %>% group_by(sub,condition,roi) %>% summarise(similarity = mean(similarity))
+HIPP.plot = ggplot(data = rsa.HIPP.example, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+HIPP.plot = HIPP.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+HIPP.plot
+```
+
+```{r}
+rsa.VMPFC = rsa %>% filter(roi == "rh-VMPFC") %>% group_by(sub,condition) %>% summarise(similarity = mean(similarity))
+VMPFC.plot = ggplot(data = rsa.VMPFC, aes(x = factor(condition), y = similarity)) + geom_boxplot(outlier.shape = NA) + theme(text = element_text(size = 25, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0))
+VMPFC.plot = VMPFC.plot + ylab("Similarity") + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+VMPFC.plot
+```
+
+
+
+## VMPFC, nada yet
+
+```{r}
+rsa.VMPFC = rsa %>% filter(roi == "lh-VMPFC")
+m1.VMPFC = aov_ez("sub", "similarity", rsa.VMPFC, within = c("condition"))
+m1.VMPFC
+ls.VMPFC = lsmeans(m1.VMPFC,~condition,contr = "pairwise", adjust = NULL)
+ls.VMPFC
+contrast(ls.VMPFC, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r fig.width = 12, fig.asp = .62}
+
+pm.fig.dat = rsa.PMAT %>%  filter(roi_group == "PM") %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .3)) +  facet_wrap( ~roi, ncol=5)
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+```
+
+```{r fig.width = 12, fig.asp = .62}
+
+pm.fig.dat = rsa %>%  filter(roi_group == "HIPP") %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA) + scale_y_continuous(limits = c(-.05, .2)) +  facet_wrap( ~roi, ncol=3)
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+```
+
+
+
+```{r fig.width = 12, fig.asp = .62}
+
+multi.fig.dat = rsa %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+
+for (ipage in 1:12) {
+  ggplot(data = multi.fig.dat, aes(x = factor(condition), y = similarity)) + scale_y_continuous(limits = c(-.05, .3)) + geom_boxplot() + facet_wrap_paginate(~roi, nrow=2, ncol=2, page=ipage) + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+  fname = sprintf("reg_correct_5ptile_10_27_18_%d.pdf", ipage) 
+  ggsave(fname)
+}
+```
+
+```{r}
+rsa.IFG = rsa %>% filter(roi_group == "IFG")
+m1.IFG = aov_ez("sub", "similarity", rsa.IFG, within = c("condition", "roi"))
+m1.IFG
+ls.IFG = lsmeans(m1.IFG,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.IFG
+contrast(ls.IFG, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r fig.width = 12, fig.asp = .62}
+
+pm.fig.dat = rsa.IFG %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+PM.check = ggplot(data = pm.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot() + scale_y_continuous(limits = c(-.05, .3)) +  facet_wrap( ~roi, ncol=5)
+PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled")) 
+PM.check
+```
+
+```{r}
+# is anything sig dif with intact besides same position??
+# rsa$sub = factor(rsa$sub)
+# rsa.all = rsa %>% filter(rsa$position == 1)  
+# rsa.all = rsa.all %>% filter(rsa$sub != "s041")
+# rsa.all = rsa.all %>%   group_by(sub,roi,condition) %>% summarise(similarity =mean(similarity))
+# rsa.all = rsa %>% filter(rsa$roi != "lh-occ-pole")
+m1.all = aov_ez("sub", "similarity", rsa, within = c("condition", "roi"))
+m1.all
+ls.all = lsmeans(m1.all,~condition|roi,contr = "pairwise", adjust = NULL)
+# ls.IFG
+contrast(ls.all, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r}
+rsa.mpfc = rsa %>% filter(rsa$roi == "lh-MPFC" )
+rsa.mpfc = rsa.mpfc %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+m1.all = aov_ez("sub", "similarity", rsa.mpfc, within = c("condition"))
+m1.all
+ls.all = lsmeans(m1.all,~condition,contr = "pairwise", adjust = NULL)
+ls.all
+contrast(ls.all, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+```{r}
+rsa.mpfc = rsa %>% filter(rsa$roi == "rh-inf-triang" )
+rsa.mpfc = rsa.mpfc %>% group_by(sub,roi,condition) %>% summarise(similarity = mean(similarity))
+m1.all = aov_ez("sub", "similarity", rsa.mpfc, within = c("condition"))
+m1.all
+ls.all = lsmeans(m1.all,~condition,contr = "pairwise", adjust = NULL)
+ls.all
+contrast(ls.all, alpha=0.05, method="pairwise", adjust= "holm")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
