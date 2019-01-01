@@ -1,5 +1,5 @@
 ---
-title: "rsa_group_stats_10_24_18"
+title: "rsa_fir_glass_12_30_18"
 author: "WBR"
 date: "10/24/2018"
 output: html_document
@@ -22,81 +22,53 @@ library('emmeans')
 
 
 # SVSS with positions and beta threshold
-rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/RSAmeans_fir_10_31_18_5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/RSAmeans_fir_glass_12_30_18_5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
 
 # noisiest subject
 bad_subs = c('s001', "s008","s016", "s027","s043","s032","s039") # , "s041"
 rsa$drop_subs = rsa$sub %in% bad_subs
 rsa = rsa[!(rsa$drop_subs == TRUE),]
 
-# s022 rh-prc is messed up, 20 most negatvie correlations in whole dataset. NA all of those for time being
-# rsa$too_low = rsa$similarity < -.4
-# rsa = rsa[!(rsa$too_low == TRUE),]
-# ## a couple that are 1 somehow..
-# rsa$too_high = rsa$similarity > .8
-# rsa = rsa[!(rsa$too_high == TRUE),]
+
+# extreme vals
+rsa$too_low = rsa$similarity < -.5
+rsa = rsa[!(rsa$too_low == TRUE),]
+## a couple that are 1 somehow..
+rsa$too_high = rsa$similarity > .8
+rsa = rsa[!(rsa$too_high == TRUE),]
        
-rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity)) %>% ungroup()
+# rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity)) %>% ungroup()
 
+# fix roi labels
+rsa$roi = gsub("-", "_", rsa$roi)
+rsa$roi = gsub("reslice_", "", rsa$roi)
 
-# the rois
-PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
-AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole', 'lh-OFC', 'rh-OFC')
-HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 'near-hipp-tail-L', 'near-hipp-tail-R')
-PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
-                 'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
-IFG= c( 'lh-inf-opercular', 'lh-inf-triang', 'rh-inf-opercular', 'rh-inf-triang', 'rh-inf-orbital', 'lh-inf-orbital')
-frontal = c( 'lh-inf-opercular', 'lh-inf-triang', 'rh-inf-opercular', 'rh-inf-triang', 'rh-inf-orbital', 'lh-inf-orbital','rh-insula-inf','lh-insula-inf','rh-insula-short','lh-insula-short','lh-VMPFC','rh-VMPFC','lh-MPFC','rh-MPFC','rh-MTG','lh-MTG','rh-OFC','lh-OFC')
-# 'lh-insula-short', 'lh-insula-inf','rh-insula-short', 'rh-insula-inf', 
-# vmpfc = c('near-VMPFC') 
+# PMAT 3.0 labels
+modulelabs = read.table("12_31_18_glasser_pmat.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
 
-
-
+LANGrois = modulelabs %>%  filter(Module == 1)
+ATrois = modulelabs %>%  filter(Module == 2)
+PMrois = modulelabs %>%  filter(Module == 3)
 
 # make networks factor
-# first make logical vectors for member regions
-rsa$PM = rsa$roi %in% PM_rois
-rsa$AT = rsa$roi %in% AT_rois
-rsa$HIPP = rsa$roi %in% HIPP_rois
-rsa$PM_HIPP = rsa$roi %in% PM_HIPP_rois
-rsa$IFG = rsa$roi %in% IFG
-rsa$frontal = rsa$roi %in% frontal
+rsa$lang = rsa$roi %in% LANGrois$ROI
+rsa$AT = rsa$roi %in% ATrois$ROI
+rsa$PM = rsa$roi %in% PMrois$ROI
+
+rsa$vischeck = grepl(".*V\\d.*",rsa$roi)
 
 # now assign group label in single column
-# rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
-rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", ifelse(rsa$IFG == TRUE, "IFG","Other"))))
+rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$lang == TRUE, "LANG", ifelse(rsa$vischeck == TRUE, "VIS", "other"))))
+
 # delete the logical vectors
-rsa[,6:11] = NULL
+rsa[,6:12] = NULL
 # make group a factor
 rsa$roi_group = as.factor(rsa$roi_group)
-
-# wish I did this earlier but hindsight yada yada
-rsa$roi = gsub(".*body-L$", "lh-hipp-body", rsa$roi)
-rsa$roi = gsub(".*body-R$", "rh-hipp-body", rsa$roi)
-rsa$roi = gsub(".*head-L$", "lh-hipp-head", rsa$roi)
-rsa$roi = gsub(".*head-R$", "rh-hipp-head", rsa$roi)
-rsa$roi = gsub(".*tail-L$", "lh-hipp-tail", rsa$roi)
-rsa$roi = gsub(".*tail-R$", "rh-hipp-tail", rsa$roi)
-rsa$roi = gsub(".*ant-L$", "lh-phc-ant", rsa$roi)
-rsa$roi = gsub(".*ant-R$", "rh-phc-ant", rsa$roi)
-# rsa$roi = gsub(".*VMPFC", "VMPFC", rsa$roi)
-rsa$roi = gsub(".*prc-L$", "lh-prc", rsa$roi)
-rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
-########################
-# PMAT AT and HIPP only
-rsa.PMAT = rsa %>% filter(roi_group != "Other") %>% filter(roi_group != "IFG")  %>% filter(roi_group != "frontal")
-rsa.frontal = rsa %>% filter(rsa$frontal == TRUE)
 
 
 # rt  diffs
 rt.diffs =  read.csv("rtdiffs_11_1_18.csv")
 rt.diffs[,1] =NULL 
-
-
-# nice labels
-PM_labs = c('lh-phc-ant', 'rh-phc-ant', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
-AT_labs = c('lh-prc',	'rh-prc', 	'lh-TPole', 	'rh-TPole', 'lh-OFC', 'rh-OFC')
-HIPP_labs = c('lh-hipp-body','rh-hipp-body','lh-hipp-head','rh-hipp-head','lh-hipp-tail','rh-hipp-tail')
 
 ```
 
@@ -112,11 +84,12 @@ HIPP_labs = c('lh-hipp-body','rh-hipp-body','lh-hipp-head','rh-hipp-head','lh-hi
 ## Plot by network cluster
 
 ```{r fig.width = 12, fig.asp = .62}
-clust.fig.dat = rsa.PMAT %>% filter(position == 1) %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
-clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.05, .35))
+clust.fig.dat = rsa  %>% filter(position %in% 1:25) %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
+clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.05, .2))
 clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled"))
 clusters.rois
 ```
+
 ```{r}
 rsa.PM = rsa %>% filter(roi_group == "PM")
 line.dat = rsa.PMAT  %>% filter(roi == "rh-Prec")%>%  group_by(condition,position) %>% summarise(similarity = mean(similarity))
@@ -163,7 +136,10 @@ PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = simila
 ### poster quality line plots
 ```{r}
 
-post_rois = c("lh-Prec","rh-Prec", "lh-occ-pole", "rh-occ-pole","lh-MTG","lh-inf-triang","lh-inf-opercular","lh-inf-orbital","rh-MPFC","rh-ANG","lh-ANG","lh-phc-ant","rh-phc-ant")
+# post_rois = c("L_V1_ROI", "R_V1_ROI", "L_V2_ROI", "R_V2_ROI")
+# post_rois = unique(LANGrois$ROI)
+# post_rois = unique(PMrois$ROI)
+post_rois = unique(ATrois$ROI)
 
 for (iroi in 1:length(post_rois)) {
 # rsa.PM = rsa %>% filter(rsa$frontal == TRUE)
@@ -178,13 +154,10 @@ PM.line
 #+  facet_wrap_paginate(~roi,nrow=3,ncol=2,page = ipage) 
   # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
 
-  fname = sprintf("sfn18_figs/%s_timcourse.pdf", post_rois[iroi])
+  fname = sprintf("pcwc19_figs/AT_%s_timcourse.pdf", post_rois[iroi])
   ggsave(fname, plot = PM.line, dpi = 600,width = 8, height = 5,units = "in")
 }
 ```
-
-
-
 
 #### subject level line plots
 
@@ -209,84 +182,76 @@ lapply(unique(rsa$sub),indie.sub.plots, region = "rh-Prec")
 ```
 
 
-
 ```{r}
 # %>%  filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5)
-clust.fig.dat = rsa %>% filter(roi =="lh-Prec") %>% filter(condition != "random")  %>% filter(position %in% 1:25)  %>% group_by(sub,condition,position) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+clust.fig.dat = rsa %>% filter(condition != "random")  %>% filter(position %in% 1:25)  %>% group_by(sub,condition,roi_group,position) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 clust.fig.dat = droplevels(clust.fig.dat)
 # clust.fig.dat$roi = as.factor(clust.fig.dat$roi)
-a1 = aov_ez("sub", "similarity", clust.fig.dat, within = c("condition","position"))
+a1 = aov_ez("sub", "similarity", clust.fig.dat, within = c("condition","roi_group", "position"))
 a1
-em1 = emmeans(a1, ~ condition)
+em1 = emmeans(a1, ~ condition|roi_group)
 pairs(em1, adjust = NULL)
 # contrast(ls.m1, alpha=0.05, method="pairwise", adjust= "holm")
 
 
-# only intact and scrambled and positions 1:25
-  # lh-inf-opercular trending main effect of condition (p = .08), main effect of position (p < .0001), no interaction
-  # lh-inf-triang, main effect of position, marginal interaction
-  # lh-inf-orbital, main effect of condition (p = .04), main effect of position (p < .0001), no interaction  
-  # lh-Prec main effect of position (p < .0001) and condition*position interaction (p =.002)
-  # rh-Prec main effect of position (p < .0001) and  trending condition*position interaction (p =.07)
-  # rh-MPFC main effect of condition p = .04, main effect of position, no interaction
-  # lh-occ-pole only main effect of position
-  # rh-occpole main effect of position and trending interaction...p = .06. top down prediction ??
-  # lh-ANG has marginal condition*position interaction p = .11
-  
 ```
 
+###########################
+# network level sliding window ttests!
 ```{r}
-clust.fig.dat = rsa.PMAT %>% filter(roi =="lh-Prec") %>% filter(condition == "intact") %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
-clust.fig.dat = droplevels(clust.fig.dat)
-intactdat = clust.fig.dat$similarity
-
-clust.fig.dat = rsa.PMAT %>% filter(roi =="lh-Prec") %>% filter(condition == "scrambled") %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
-clust.fig.dat = droplevels(clust.fig.dat)
-scrambleddat = clust.fig.dat$similarity
-
-t.test(intactdat, scrambleddat, paired = TRUE)
-
-
-```
-
-```{r}
-
-wbr.first5ps.ttest = function(region,df,con1,con2) {
-  temp.df = df %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+wbr.sliding.ttest.network = function(midval,region,winval,con1,con2) {
+  temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat1 = temp.df$similarity
 
-temp.df = df %>% filter(roi == region) %>% filter(condition == con2) %>%   filter(position == 1 |  position == 2 |position == 3 | position == 4 | position == 5) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat2 = temp.df$similarity
 if (length(dat1) == length(dat2)){
   print(region)
-  out = t.test(dat1, dat2, paired = TRUE)
+  result = t.test(dat1, dat2, paired = TRUE)
+  pval = result$p.value
+  tval = result$statistic
+# pval = sprintf('%.3f',as.numeric(fromcor[3]))
+# rval = sprintf('%.3f',as.numeric(fromcor[4]))
+
+  out = c(pval,tval)
   return(out)
+  
 } else {
   fprint('problem with %s !!!',region )
 }
 }
-
-
 ```
 
 ```{r}
-# roi.list = list(unique(rsa.PM$roi))
-# for (iroi in PM_rois){
-# wbr.first5ps.ttest(rsa,,'intact','scrambled')
-# }
+tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=2,region="LANG",con1="intact",con2="scrambled")
+tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
+tstatdat$timepoint = 1:32
+tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
 
-the_rois = c('lh-Prec', 'rh-Prec')
+#plot that shit
+tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  +
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-2.25 , 3.5),breaks = c(-2,-1,0,1,2,3))
+# +
+  # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
+#   geom_segment(x = 29,y =-.25,xend= 29,yend = .25, color = "red",size=.75) +
+#   geom_segment(x = 28,y =-.25,xend= 28,yend = .25, color = "red",size=.75) +
+#   geom_segment(x = 30,y =-.25,xend= 30,yend = .25, color = "red",size=.75) +
+#   geom_segment(x = 31,y =-.25,xend= 31,yend = .25, color = "red",size=.75) 
 
-lapply(HIPP_labs, wbr.first5ps.ttest, df=rsa,con1='intact',con2='scrambled')
 
+tstat.plot
+# ggsave("sfn18_figs/sliding.tstat_lh-MTG.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+
+# lh-Prec sig ttest at p1-p6
 ```
 
-# sliding window ttests!
+
+# sliding window ttests for individual regions!
 ################################
-```{r}
 
+```{r}
 wbr.sliding.ttest = function(midval,region,winval,con1,con2) {
   temp.df = rsa %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
@@ -378,56 +343,17 @@ if (length(dat1) == length(dat2)){
   fprint('problem with %s !!!',region )
 }
 }
-
-
 ```
 
 ```{r}
 
 
-lapply(HIPP_labs, wbr.allps.ttest, df=rsa,con1='intact',con2='random')
+lapply(post_rois, wbr.allps.ttest, df=rsa,con1='intact',con2='scrambled')
 
 
 
 ```
 
-
-```{r}
-wbr.last5ps.ttest = function(region,df,con1,con2) {
-  temp.df = df %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position == 21 |  position == 22 |position == 23 | position == 24 | position == 25) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
-temp.df = droplevels(temp.df)
-dat1 = temp.df$similarity
-
-temp.df = df %>% filter(roi == region) %>% filter(condition == con2) %>%   filter(position == 21 |  position == 22 |position == 23 | position == 24 | position == 25) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
-temp.df = droplevels(temp.df)
-dat2 = temp.df$similarity
-if (length(dat1) == length(dat2)){
-  print(region)
-  out = t.test(dat1, dat2, paired = TRUE)
-  return(out)
-} else {
-  fprint('problem with %s !!!',region )
-}
-}
-```
-
-
-```{r}
-
-lapply(HIPP_labs, wbr.last5ps.ttest, df=rsa,con1='intact',con2='random')
-
-# FOR LAST 5 PS
-#left inf operc P = .04
-# left inf trian p = .05
-# rh-MPFC is not sig
-# HIpp had a couple ps = .10
-# pm has nada
-#  at has nada
-
-# intact > random in right hipp head p = .03 
-
-
-```
 
 
 ## correlations
