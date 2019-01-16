@@ -49,6 +49,8 @@ modulelabs = read.table("12_31_18_glasser_pmat.csv",header = TRUE, stringsAsFact
 LANGrois = modulelabs %>%  filter(Module == 1)
 ATrois = modulelabs %>%  filter(Module == 2)
 PMrois = modulelabs %>%  filter(Module == 3)
+# problem ROI, needs investigating
+ATrois = ATrois %>%  filter(ROI != "L_s6-8_ROI")
 
 # make networks factor
 rsa$lang = rsa$roi %in% LANGrois$ROI
@@ -140,6 +142,7 @@ PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = simila
 # post_rois = unique(LANGrois$ROI)
 # post_rois = unique(PMrois$ROI)
 post_rois = unique(ATrois$ROI)
+post_rois = "L_V1_ROI"
 
 for (iroi in 1:length(post_rois)) {
 # rsa.PM = rsa %>% filter(rsa$frontal == TRUE)
@@ -154,8 +157,8 @@ PM.line
 #+  facet_wrap_paginate(~roi,nrow=3,ncol=2,page = ipage) 
   # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
 
-  fname = sprintf("pcwc19_figs/AT_%s_timcourse.pdf", post_rois[iroi])
-  ggsave(fname, plot = PM.line, dpi = 600,width = 8, height = 5,units = "in")
+  # fname = sprintf("pcwc19_figs/AT_%s_timcourse.pdf", post_rois[iroi])
+  # ggsave(fname, plot = PM.line, dpi = 600,width = 8, height = 5,units = "in")
 }
 ```
 
@@ -207,7 +210,7 @@ dat1 = temp.df$similarity
 temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat2 = temp.df$similarity
-if (length(dat1) == length(dat2)){
+if (length(dat1) == length(dat2)  && length(dat1) > 0){
   print(region)
   result = t.test(dat1, dat2, paired = TRUE)
   pval = result$p.value
@@ -260,7 +263,7 @@ dat1 = temp.df$similarity
 temp.df = rsa %>% filter(roi == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat2 = temp.df$similarity
-if (length(dat1) == length(dat2)){
+if (length(dat1) == length(dat2) && length(dat1) > 0){
   print(region)
   result = t.test(dat1, dat2, paired = TRUE)
   pval = result$p.value
@@ -272,13 +275,13 @@ if (length(dat1) == length(dat2)){
   return(out)
   
 } else {
-  fprint('problem with %s !!!',region )
+  print(sprintf('problem with %s !!!',region))
 }
 }
 ```
 
 ```{r}
-tstatdat = lapply(1:32,wbr.sliding.ttest,winval=2,region="lh-MTG",con1="intact",con2="scrambled")
+tstatdat = lapply(1:32,wbr.sliding.ttest,winval=2,region="L_V1_ROI",con1="intact",con2="scrambled")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
@@ -288,19 +291,91 @@ tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + g
 geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-2.25 , 3.5),breaks = c(-2,-1,0,1,2,3))
 # +
   # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
-#   geom_segment(x = 29,y =-.25,xend= 29,yend = .25, color = "red",size=.75) +
-#   geom_segment(x = 28,y =-.25,xend= 28,yend = .25, color = "red",size=.75) +
-#   geom_segment(x = 30,y =-.25,xend= 30,yend = .25, color = "red",size=.75) +
-#   geom_segment(x = 31,y =-.25,xend= 31,yend = .25, color = "red",size=.75) 
-
 
 tstat.plot
 # ggsave("sfn18_figs/sliding.tstat_lh-MTG.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
-
-# lh-Prec sig ttest at p1-p6
 ```
 
+#######################################
+# use sliding ttest single region function to make df of tvals for all PMAT regions, then save df 
 
+```{r}
+make_tval_df = function(inputroi){
+  # get the tvals
+  tstatdat = lapply(1:32,wbr.sliding.ttest,winval=2,region=inputroi,con1="intact",con2="scrambled")
+  tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T), stringsAsFactors = FALSE)
+  tstatdat$timepoint = 1:32
+  tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
+  tstatdat$ROI = inputroi
+  return(tstatdat)
+}
+
+```
+
+```{r}
+# put all the pieces together
+cur_rois = unique(PMrois$ROI)
+cur_rois = droplevels(cur_rois)
+list_of_dfs = NULL
+list_of_dfs = lapply(cur_rois,make_tval_df)
+brain_movie_datPM = do.call(rbind,list_of_dfs)
+brain_movie_datPM$network = "PM"
+
+cur_rois = unique(ATrois$ROI)
+cur_rois = droplevels(cur_rois)
+list_of_dfs = NULL
+list_of_dfs = lapply(cur_rois,make_tval_df)
+brain_movie_datAT = do.call(rbind,list_of_dfs)
+brain_movie_datAT$network = "AT"
+
+cur_rois = unique(LANGrois$ROI)
+cur_rois = droplevels(cur_rois)
+list_of_dfs = NULL
+list_of_dfs = lapply(cur_rois,make_tval_df)
+brain_movie_datLANG = do.call(rbind,list_of_dfs)
+brain_movie_datLANG$network = "LANG"
+
+brain_movie_dat = bind_rows(brain_movie_datPM,brain_movie_datAT,brain_movie_datLANG)
+```
+
+```{r}
+write_csv(brain_movie_dat, "brainmoviedata_1_3_19.csv")
+
+```
+
+```{r}
+
+# initialize empty data frame for sliding tval brain movie thing
+# this df will be added to with each step through the for loop
+brain_movie_dat = data.frame(pval=double(),
+                 tval=double(),
+                 timepoint=integer(),
+                 ROI=character(),
+                 network =character(),
+                 stringsAsFactors=FALSE)
+
+
+cur_rois = unique(PMrois$ROI)
+
+# list_of_frames <- replicate(length(cur_rois), data.frame())
+
+for (iroi in length(cur_rois)){
+  # get the tvals
+  tstatdat = lapply(1:32,wbr.sliding.ttest,winval=2,region=cur_rois[iroi],con1="intact",con2="scrambled")
+  tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T), stringsAsFactors = FALSE)
+  tstatdat$timepoint = 1:32
+  tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
+  tstatdat$ROI = cur_rois[iroi]
+  tstatdat$network = "PM"
+  
+  # list_of_frames[[iroi]] <- tstatdat
+  
+  # add to the df
+  brain_movie_dat <<- bind_rows(brain_movie_dat, tstatdat)
+  
+}
+# brain_movie_dat = bind_rows(list_of_frames)
+```
 
 
 ```{r}
