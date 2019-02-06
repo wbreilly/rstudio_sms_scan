@@ -313,7 +313,7 @@ if (length(dat1) == length(dat2)){
 ```
 
 ```{r}
-tstatdat = lapply(1:32,wbr.sliding.ttest,winval=2,region="lh-MTG",con1="intact",con2="scrambled")
+tstatdat = lapply(1:32,wbr.sliding.ttest,winval=2,region="rh-hipp-body",con1="intact",con2="scrambled")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
