@@ -46,16 +46,20 @@ rsa$roi = gsub("-", "_", rsa$roi)
 rsa$roi = gsub("reslice_", "", rsa$roi)
 
 # PMAT 3.0 labels
-# modulelabs = read.table("12_31_18_glasser_pmat.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+modulelabs = read.table("2_18_glasser_pmat_labels_forR.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
 # adds node strength
-modulelabs = read.table("1_23_18_glasser_pmat_nodestrength.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+# modulelabs = read.table("1_23_18_glasser_pmat_nodestrength.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
 # convert nodestrength to percentile
-modulelabspct = modulelabs %>%  group_by(Module) %>% mutate(p_node = percent_rank(node_strength)) %>% ungroup()
-topmodulelabs = modulelabspct %>% filter(p_node >= .1)
+# modulelabspct = modulelabs %>%  group_by(Module) %>% mutate(p_node = percent_rank(node_strength)) %>% ungroup()
+# topmodulelabs = modulelabspct %>% filter(p_node >= .1)
 
-LANGrois = topmodulelabs %>%  filter(Module == 1)
-PMrois = topmodulelabs %>%  filter(Module == 2)
-ATrois = topmodulelabs %>%  filter(Module == 3)
+# LANGrois = topmodulelabs %>%  filter(Module == 1)
+# PMrois = topmodulelabs %>%  filter(Module == 2)
+# ATrois = topmodulelabs %>%  filter(Module == 3)
+
+LANGrois = modulelabs %>%  filter(Module == 1)
+PMrois = modulelabs %>%  filter(Module == 2)
+ATrois = modulelabs %>%  filter(Module == 3)
 
 # problem ROI, needs investigating
 PMrois = PMrois %>%  filter(ROI != "L_s6-8_ROI")
