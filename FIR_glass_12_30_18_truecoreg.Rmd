@@ -18,8 +18,7 @@ library(tidyverse)
 library(afex)
 library(ggforce)
 library('emmeans')
-
-
+library(parallel) 
 
 # SVSS with positions and beta threshold
 rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/RSAmeans_fir_glass_12_30_18_5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
@@ -46,20 +45,20 @@ rsa$roi = gsub("-", "_", rsa$roi)
 rsa$roi = gsub("reslice_", "", rsa$roi)
 
 # PMAT 3.0 labels
-modulelabs = read.table("2_18_glasser_pmat_labels_forR.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+# modulelabs = read.table("2_18_glasser_pmat_labels_forR.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
 # adds node strength
-# modulelabs = read.table("1_23_18_glasser_pmat_nodestrength.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+modulelabs = read.table("2_20_glasser_pmat_nodestrength.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
 # convert nodestrength to percentile
-# modulelabspct = modulelabs %>%  group_by(Module) %>% mutate(p_node = percent_rank(node_strength)) %>% ungroup()
-# topmodulelabs = modulelabspct %>% filter(p_node >= .1)
+modulelabspct = modulelabs %>%  group_by(Module) %>% mutate(p_node = percent_rank(node_strength)) %>% ungroup()
+topmodulelabs = modulelabspct %>% filter(p_node >= .15)
 
-# LANGrois = topmodulelabs %>%  filter(Module == 1)
-# PMrois = topmodulelabs %>%  filter(Module == 2)
-# ATrois = topmodulelabs %>%  filter(Module == 3)
+LANGrois = topmodulelabs %>%  filter(Module == 1)
+PMrois = topmodulelabs %>%  filter(Module == 2)
+ATrois = topmodulelabs %>%  filter(Module == 3)
 
-LANGrois = modulelabs %>%  filter(Module == 1)
-PMrois = modulelabs %>%  filter(Module == 2)
-ATrois = modulelabs %>%  filter(Module == 3)
+# LANGrois = modulelabs %>%  filter(Module == 1)
+# PMrois = modulelabs %>%  filter(Module == 2)
+# ATrois = modulelabs %>%  filter(Module == 3)
 
 # problem ROI, needs investigating
 PMrois = PMrois %>%  filter(ROI != "L_s6-8_ROI")
@@ -79,7 +78,29 @@ rsa[,6:12] = NULL
 # make group a factor
 rsa$roi_group = as.factor(rsa$roi_group)
 
+###### adding sub networks 
+mpfc_subgroup = modulelabs %>% filter(sub_group == "mpfc")
+pm_subgroup = modulelabs %>% filter(sub_group == "posterior_medial")
+lp_subgroup = modulelabs %>% filter(sub_group == "lateral_parietal")
+t_subgroup = modulelabs %>% filter(sub_group == "temporal")
+d_subgroup = modulelabs %>% filter(sub_group == "dpfc")
+mtl_subgroup = modulelabs %>% filter(sub_group == "mtl")
 
+rsa$pm_subgroup = rsa$roi %in% pm_subgroup$ROI
+rsa$mpfc_subgroup = rsa$roi %in% mpfc_subgroup$ROI
+rsa$lp_subgroup = rsa$roi %in% lp_subgroup$ROI
+rsa$t_subgroup = rsa$roi %in% t_subgroup$ROI
+rsa$d_subgroup = rsa$roi %in% d_subgroup$ROI
+rsa$mtl_subgroup = rsa$roi %in% mtl_subgroup$ROI
+
+rsa$sub_group = ifelse(rsa$mpfc_subgroup == TRUE, "mpfc", ifelse(rsa$pm_subgroup == TRUE,"pm_sub",ifelse(rsa$lp_subgroup == TRUE, "lp",ifelse(rsa$t_subgroup == TRUE, "temporal",ifelse(rsa$d_subgroup == TRUE, "dorsal",ifelse(rsa$mtl_subgroup == TRUE, "mtl","tbd"))))))
+rsa$sub_group = as.factor(rsa$sub_group)
+
+rsa[,7:12] = NULL
+
+rsa$othergroup = ifelse(rsa$sub_group == "lp" | rsa$sub_group == "pm_sub", "PM_super","other")
+
+#################
 # rt  diffs
 rt.diffs =  read.csv("rtdiffs_11_1_18.csv")
 rt.diffs[,1] =NULL 
@@ -175,8 +196,8 @@ HIPP_labs = c('lh-hipp-body','rh-hipp-body','lh-hipp-head','rh-hipp-head','lh-hi
 ## Plot by network cluster
 
 ```{r fig.width = 12, fig.asp = .62}
-clust.fig.dat = rsa  %>% filter(position %in% 1:6) %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
-clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.05, .2))
+clust.fig.dat = rsa  %>% filter(position %in% 1:7) %>% group_by(sub,condition,sub_group) %>% summarise(similarity = mean(similarity))
+clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~sub_group) + scale_y_continuous(limits = c(-.05, .2))
 clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled"))
 clusters.rois
 ```
@@ -289,14 +310,16 @@ pairs(em1, adjust = NULL)
 
 ###########################
 # network level sliding window ttests!
+
+### changed roi_group!!!!!
 ```{r}
 wbr.sliding.ttest.network = function(midval,region,winval,con1,con2) {
 # grab grouped/meaned data for each condition 
-temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(othergroup == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat1 = temp.df$similarity
 
-temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(othergroup == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat2 = temp.df$similarity
 
@@ -316,7 +339,7 @@ if (length(dat1) == length(dat2)  && length(dat1) > 0){
 
 ```{r}
 # use this to get the true tstats for every timepoint. Chunk below will be used to ID cluster mass threshold
-tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=2,region="PM",con1="intact",con2="scrambled")
+tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=2,region="PM_super",con1="intact",con2="scrambled")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
@@ -337,11 +360,11 @@ correct for timepoint MC with permutation tests
 ```{r}
 make.sliding.df = function(midval,network,winval,con1,con2) {
 # grab grouped/meaned data for each condition 
-temp.df = rsa %>% filter(roi_group == network) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(othergroup == network) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat1 = temp.df$similarity
 
-temp.df = rsa %>% filter(roi_group == network) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(othergroup == network) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 dat2 = temp.df$similarity
 
 temp.df$diff = dat1-dat2
@@ -355,14 +378,14 @@ return(temp.df)
 
 ```{r}
 # execute the above function for every timepoint, returning a list of df's, one for each timepoint, that contain mean differences for every subject
-# library(parallel)
+
 # Calculate the number of cores
 no_cores = detectCores() - 1
 # Initiate cluster
 cl = makeCluster(no_cores,type = "FORK")
 
 list_of_dfs = NULL
-list_of_dfs = parLapply(cl,1:32,make.sliding.df,winval=2,network="PM",con1="intact",con2="scrambled")
+list_of_dfs = parLapply(cl,1:32,make.sliding.df,winval=2,network="PM_super",con1="intact",con2="scrambled")
 timecourse_dat= do.call(rbind,list_of_dfs)
 
 stopCluster(cl)
@@ -448,7 +471,7 @@ no_cores = detectCores() - 1
 # Initiate cluster
 cl = makeCluster(no_cores,type = "FORK")
 
-permhist = unlist(parLapply(cl,1:1000,run.the.perms))
+permhist = unlist(parLapply(cl,1:10000,run.the.perms))
 
 stopCluster(cl)
 ```
