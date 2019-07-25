@@ -213,11 +213,11 @@ rt.diffs[,1] =NULL
 # adding runnum grouping
 wbr.sliding.ttest.network = function(midval,region,winval,con1,con2,run) {
   # grab grouped/meaned data for each condition 
-  temp.df = rsa %>% filter(sub_group == region) %>% filter(condition == con1, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+  temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con1, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
   temp.df = droplevels(temp.df)
   dat1 = temp.df$similarity
   
-  temp.df = rsa %>% filter(sub_group == region) %>% filter(condition == con2, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+  temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con2, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
   temp.df = droplevels(temp.df)
   dat2 = temp.df$similarity
   
@@ -260,16 +260,30 @@ mpfc is -3.6 at tp 6 run2 --
 tbd      mpfc     pm_sub   dorsal   lp       mtl      temporal
 ```{r}
 # use this to get the true tstats for every timepoint. Chunk below will be used to ID cluster mass threshold
-tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="lp",con1="intact",con2="scrambled", run="run1")
+tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="PM",con1="intact",con2="scrambled", run="run3")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
 
 #plot that shit
 tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  +
-  geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-4.5 , 4.5),breaks = c(-4,-3,-2,-1,0,1,2,3,4))
+  geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-4.5 , 4.5),breaks = c(-4,-3,-2,-1,0,1,2,3,4)) + ggtitle("PM univariate run3")
 # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
 
 tstat.plot
-# ggsave("march19_uni_tstat/tstat_pmmtl.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+ggsave("july19/tstat_pm_uni_run3.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+```
+
+# line for each condition instead of difference/tstat line plot
+```{r}
+
+rsa.PM = rsa %>% filter(rsa$roi_group == "AT", condition != "random")
+line.dat = rsa.PM  %>% group_by(condition,position,runnum) %>% summarise(similarity = mean(similarity))
+
+
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) + facet_wrap(~runnum) + ylab("BOLD") + xlab("TR")
+  # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
+  
+PM.line
+ggsave("july19/at_uni_meantimecourses_byrun.pdf", plot = PM.line, dpi = 600,width = 10, height = 5,units = "in")
 ```
