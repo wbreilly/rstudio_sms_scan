@@ -52,7 +52,7 @@ rsa$drop_subs = NULL
 # the rois
 PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
 AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole', 'lh-OFC', 'rh-OFC')
-HIPP_rois = c('near_hipp_body_L',	'near_hipp_body_R',	'near_hipp_head_L',	'near_hipp_head_R', 'near_hipp_tail_L', 'near_hipp_tail_R')
+HIPP_rois = c('near_hipp_body_L',	'near_hipp_body_R',	'near_hipp_head_L',	'near_hipp_head_R')# no tail plz, 'near_hipp_tail_L', 'near_hipp_tail_R')
 PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
                  'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
 IFG= c( 'lh-inf-opercular', 'lh-inf-triang', 'rh-inf-opercular', 'rh-inf-triang', 'rh-inf-orbital', 'lh-inf-orbital')
@@ -106,7 +106,14 @@ HIPP_labs = c('lh-hipp-body','rh-hipp-body','lh-hipp-head','rh-hipp-head','lh-hi
 # in this script actually just want hipp rois..
 rsa = rsa[(rsa$roi_group == "HIPP"),]
 
+rsa$sub_group = rsa$roi_group
+rsa$roi_group  = NULL
+
+rsa = rsa %>% group_by(sub,condition,sub_group,position,runnum,seqnum) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+
 hipp_rsa = rsa
+
+# write_csv(hipp_rsa,"fconn_hipp_dat.csv")
 ```
 
 # Glasser rois
@@ -217,29 +224,58 @@ rsa[,9:14] = NULL
 rt.diffs =  read.csv("rtdiffs_11_1_18.csv")
 rt.diffs[,1] =NULL 
 
+# rsa$sub_group = ifelse(rsa$sub_group == "tbd" & )
+rsa$sub_group <- as.character(rsa$sub_group)
+rsa$sub_group[rsa$roi_group == "AT" ] = "AT"
+rsa$sub_group[rsa$roi_group == "VIS" ] = "VIS"
+rsa$sub_group[rsa$roi_group == "LANG" ] = "LANG"
+rsa$sub_group = as.factor(rsa$sub_group)
 
 # infconn script just want sub_groups
 rsa = rsa %>% group_by(sub,condition,sub_group,position,runnum,seqnum) %>% summarise(similarity = mean(bold)) %>%  ungroup()
+
+
 
 # write_csv(rsa,"fconn_glass_dat.csv")
 
 ```
 
+####
+read data from condensed csvs
+```{r}
+library(tidyverse)
+library(afex)
+library(ggforce)
+library('emmeans')
+library(purrr)
+
+rsa_hipp = read_csv("fconn_hipp_dat.csv")
+rsa_glass = read_csv("fconn_glass_dat.csv")
+
+rsa = bind_rows(rsa_hipp,rsa_glass)
+rsa$sub_group = as.factor(rsa$sub_group)
+rsa$sub = as.factor(rsa$sub)
+rsa$runnum = as.factor(rsa$runnum)
+rsa$condition = as.factor(rsa$condition)
+rsa$seqnum = as.factor(rsa$seqnum)
+
+# need to sort by seqnum ???
+
+```
+
+
+
 ```{r}
 # adding runnum grouping
 fconn_func1 = function(subj,con1,region1,region2,run) {
   # grab grouped/meaned data for each condition 
-  temp.df = rsa %>% filter(roi == region1) %>% filter(condition == con1, runnum == run,sub == subj) 
+  temp.df = rsa %>% filter(sub_group == region1) %>% filter(condition == con1, runnum == run,sub == subj) 
   temp.df = droplevels(temp.df)
   dat1 = temp.df$similarity
   
-  temp.df = rsa %>% filter(roi == region2) %>% filter(condition == con1, runnum == run,sub == subj) 
+  temp.df = rsa %>% filter(sub_group == region2) %>% filter(condition == con1, runnum == run,sub == subj) 
   temp.df = droplevels(temp.df)
   dat2 = temp.df$similarity
-  
-  # temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con2, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
-  # temp.df = droplevels(temp.df)
-  # dat2 = temp.df$similarity
   
   # run pearson
   if (length(dat1) == length(dat2)  && length(dat1) > 0){
@@ -250,7 +286,7 @@ fconn_func1 = function(subj,con1,region1,region2,run) {
     pval = result$p.value
     rval = result$estimate
   
-    out = c(pval,unname(rval),subj,con1)
+    out = c(pval,unname(rval),subj,con1,region1,region2)
     return(out)
   } else {
     sprintf('problem with %s and %s !!!',region1,region2)
@@ -259,22 +295,21 @@ fconn_func1 = function(subj,con1,region1,region2,run) {
 ```
 
 ```{r}
-# tstatdat = lapply(unique(rsa$sub),fconn_func1,region1="near_hipp_head_L",region2="near_hipp_head_R",con1="intact", run="run1")
-# tstatdat = data.frame(matrix(unlist(tstatdat), nrow=27, byrow=T))
-# tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="rval","X3"="sub","X4"="condition"))
+# this needs to be EXACTLY as verbose as it is. Ugh. 
+df= data.frame(subj = as.vector(unique(rsa$sub)), stringsAsFactors = FALSE)
+df =CartProduct(df,c("intact","scrambled"))
+df$con1 = df$var2
+df$var2 = NULL
+df = CartProduct(df,as.vector(unique(rsa$sub_group)))
+df$region1 = df$var2
+df$var2 = NULL
+df$con1 = as.character(df$con1)
+df$region1 = as.character(df$region1)
 
-# Vectorizing a function over multiple arguments
-df= data.frame(
-  subj = as.vector(rep(unique(rsa$sub),2)),
-  con1 = c(rep("intact",27),rep("scrambled",27)),
-  region1 = rep("near_hipp_head_L",54),
-  stringsAsFactors = FALSE
-  )
-
-
-tstatdat = pmap(df,fconn_func1,region2="near_hipp_head_R", run="run1")
-tstatdat = data.frame(matrix(unlist(tstatdat), nrow=54, byrow=T))
-tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="rval","X3"="sub","X4"="condition"))
+# before moving forward need to check that this is reasonable way to to do FCONN and that same sequences are being correlated 
+tstatdat = pmap(df,fconn_func1,region2 = "HIPP", run="run1")
+tstatdat = data.frame(matrix(unlist(tstatdat), nrow=594, byrow=T))
+tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="rval","X3"="sub","X4"="condition","X5"="region1","X6"="region2"))
 
 ```
 
@@ -305,6 +340,7 @@ CartProduct = function(CurrentMatrix, NewElement)
   var2 = matrix(var2[order(var2)], nrow = length(var2), ncol = 1)
  
   CartProduct = cbind(var1, var2)
+  CartProduct$var2 = as.character(CartProduct$var2)
   return (CartProduct)
 }
 ```
@@ -313,11 +349,11 @@ CartProduct = function(CurrentMatrix, NewElement)
 # adding runnum grouping
 wbr.sliding.ttest.network = function(midval,region,winval,con1,con2,run) {
   # grab grouped/meaned data for each condition 
-  temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con1, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+  temp.df = rsa %>% filter(sub_group == region) %>% filter(condition == con1, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
   temp.df = droplevels(temp.df)
   dat1 = temp.df$similarity
   
-  temp.df = rsa %>% filter(roi_group == region) %>% filter(condition == con2, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+  temp.df = rsa %>% filter(sub_group == region) %>% filter(condition == con2, runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
   temp.df = droplevels(temp.df)
   dat2 = temp.df$similarity
   
@@ -371,7 +407,7 @@ tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + g
 # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
 
 tstat.plot
-ggsave("july19/tstat_pm_uni_run3.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+# ggsave("july19/tstat_pm_uni_run3.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
 ```
 
 # line for each condition instead of difference/tstat line plot
