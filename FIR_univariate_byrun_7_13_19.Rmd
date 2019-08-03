@@ -260,30 +260,152 @@ mpfc is -3.6 at tp 6 run2 --
 tbd      mpfc     pm_sub   dorsal   lp       mtl      temporal
 ```{r}
 # use this to get the true tstats for every timepoint. Chunk below will be used to ID cluster mass threshold
-tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="PM",con1="intact",con2="scrambled", run="run3")
+tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="LANG",con1="intact",con2="scrambled", run="run1")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
 
 #plot that shit
 tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  +
-  geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-4.5 , 4.5),breaks = c(-4,-3,-2,-1,0,1,2,3,4)) + ggtitle("PM univariate run3")
+  geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-4.5 , 4.5),breaks = c(-4,-3,-2,-1,0,1,2,3,4)) #+ ggtitle("AT univariate run3")
 # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
 
 tstat.plot
-ggsave("july19/tstat_pm_uni_run3.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+# ggsave("july19/tstat_at_uni_run3.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
 ```
 
 # line for each condition instead of difference/tstat line plot
 ```{r}
-
-rsa.PM = rsa %>% filter(rsa$roi_group == "AT", condition != "random")
+rsa.PM = rsa %>% filter(rsa$roi_group == "HIPP") 
+rsa.PM = rsa.PM %>%  filter(roi %in% c("near_hipp_head_R","near_hipp_body_R"), condition != "random")
 line.dat = rsa.PM  %>% group_by(condition,position,runnum) %>% summarise(similarity = mean(similarity))
 
 
-PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) + facet_wrap(~runnum) + ylab("BOLD") + xlab("TR")
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) + facet_wrap(~runnum) + ylab("BOLD") + xlab("TR") + ggtitle("All Hipp Univariate")
   # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
   
 PM.line
-ggsave("july19/at_uni_meantimecourses_byrun.pdf", plot = PM.line, dpi = 600,width = 10, height = 5,units = "in")
+# ggsave("july19/allhipp_uni_meantimecourses_byrun.pdf", plot = PM.line, dpi = 600,width = 10, height = 5,units = "in")
 ```
+
+
+#########################
+correct for timepoint MC with permutation tests
+
+# start with func for computing true sliding window condition mean difference time courses
+```{r}
+make.sliding.df = function(midval,network,winval,con1,con2,run) {
+# grab grouped/meaned data for each condition 
+temp.df = rsa %>% filter(roi_group == network,condition == con1,runnum == run) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = droplevels(temp.df)
+dat1 = temp.df$similarity
+
+temp.df = rsa %>% filter(roi_group == network) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+dat2 = temp.df$similarity
+
+temp.df$diff = dat1-dat2
+temp.df$similarity =NULL
+temp.df$timepoint = rep(midval,27)
+return(temp.df)
+# compute difference between means
+# temp.df = temp.df %>% mutate(cond.diff = )
+}
+```
+
+```{r}
+# execute the above function for every timepoint, returning a list of df's, one for each timepoint, that contain mean differences for every subject
+library(parallel)
+# Calculate the number of cores
+no_cores = detectCores() - 1
+# Initiate cluster
+cl = makeCluster(no_cores,type = "FORK")
+
+list_of_dfs = NULL
+list_of_dfs = parLapply(cl,1:32,make.sliding.df,winval=0,run="run1",network="LANG",con1="intact",con2="scrambled")
+timecourse_dat= do.call(rbind,list_of_dfs)
+
+stopCluster(cl)
+```
+
+```{r}
+ttestfunky = function(cur_tp,data){
+  temp_timecourse_dat =data
+  temp.df = temp_timecourse_dat %>% filter(timepoint == cur_tp)
+temp.df = droplevels(temp.df)
+dat1 = temp.df$permdiff
+
+if (length(dat1) == 27){
+  result = t.test(dat1)
+  # pval = result$p.value
+  tval = result$statistic
+  out = c(tval)
+  return(out)
+} else {
+  warning("\nSomething funked up!\n")
+}
+}
+```
+
+```{r}
+
+# generate random condition flip for each subject and apply identically for every timepoint within a sub
+perm.data = function(permnum){
+  print(sprintf('Perm #%d',permnum))
+  labshuffle = rep(sample(c(-1,1),27,replace=TRUE),32)
+  temp_timecourse_dat = timecourse_dat
+  temp_timecourse_dat = temp_timecourse_dat %>% mutate(permdiff = diff*labshuffle)
+  return(temp_timecourse_dat)
+}
+
+# calls ttest funky to run ttests for each timepoint
+evaltval = function(data){
+  temp_timecourse_dat = data
+  tvals = unlist(lapply(1:25,ttestfunky,temp_timecourse_dat))
+  maxt = max(tvals)
+  # mint = min(tvals)
+  # if (abs(maxt) > abs(mint)){
+  #   outval = maxt
+  # } else {
+  #   outval = mint
+  # }
+  # outval = mint
+  outval = maxt
+  return(outval)
+  
+  # cluster size instead of max tval
+  # pvals = unlist(lapply(1:25,ttestfunky,temp_timecourse_dat))
+  # smallps = pvals < .05
+  # # magic to find max consecutive TRUEs
+  # clustsize = max(rle(smallps)$lengths[rle(smallps)$values])
+  # if (clustsize < 1){
+  #   clustsize = 0
+  # }
+  # return(clustsize)
+}
+
+run.the.perms = function(permnum){
+  temp_timecourse_dat = perm.data(permnum)
+  outval = evaltval(temp_timecourse_dat)
+  return(outval)
+}
+
+```
+
+### finally run the perms
+```{r}
+# Calculate the number of cores
+no_cores = detectCores() - 1
+# Initiate cluster
+cl = makeCluster(no_cores,type = "FORK")
+
+permhist = unlist(parLapply(cl,1:10000,run.the.perms))
+
+stopCluster(cl)
+
+perm.df = data.frame(permhist)
+perm.df = perm.df %>% mutate(ptile = percent_rank(permhist))
+```
+
+
+
+

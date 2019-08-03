@@ -248,6 +248,7 @@ library(afex)
 library(ggforce)
 library('emmeans')
 library(purrr)
+library(psych)
 
 rsa_hipp = read_csv("fconn_hipp_dat.csv")
 rsa_glass = read_csv("fconn_glass_dat.csv")
@@ -259,10 +260,33 @@ rsa$runnum = as.factor(rsa$runnum)
 rsa$condition = as.factor(rsa$condition)
 rsa$seqnum = as.factor(rsa$seqnum)
 
-# need to sort by seqnum ???
-
 ```
 
+
+```{r}
+CartProduct = function(CurrentMatrix, NewElement)
+{
+  if (length(dim(NewElement)) != 0 )
+  {
+    warning("New vector has more than one dimension.")
+    return (NULL)
+  }
+  if (length(dim(CurrentMatrix)) == 0)
+  {
+    CurrentRows = length(CurrentMatrix)
+    CurrentMatrix = as.matrix(CurrentMatrix, nrow = CurrentRows, ncol = 1)
+  } else {
+    CurrentRows = nrow(CurrentMatrix)
+  }
+  var1 = replicate(length(NewElement), CurrentMatrix, simplify=F)
+  var1 = do.call("rbind", var1)
+  var2 = rep(NewElement, CurrentRows)
+  var2 = matrix(var2[order(var2)], nrow = length(var2), ncol = 1)
+  CartProduct = cbind(var1, var2)
+  CartProduct$var2 = as.character(CartProduct$var2)
+  return (CartProduct)
+}
+```
 
 
 ```{r}
@@ -286,10 +310,10 @@ fconn_func1 = function(subj,con1,region1,region2,run) {
     pval = result$p.value
     rval = result$estimate
   
-    out = c(pval,unname(rval),subj,con1,region1,region2)
+    out = c(pval,unname(rval),subj,con1,region1,region2,run)
     return(out)
   } else {
-    sprintf('problem with %s and %s !!!',region1,region2)
+    # sprintf('problem with %s and %s !!!',region1,region2)
   }
 }
 ```
@@ -297,53 +321,51 @@ fconn_func1 = function(subj,con1,region1,region2,run) {
 ```{r}
 # this needs to be EXACTLY as verbose as it is. Ugh. 
 df= data.frame(subj = as.vector(unique(rsa$sub)), stringsAsFactors = FALSE)
-df =CartProduct(df,c("intact","scrambled"))
+df =CartProduct(df,c("intact","scrambled","random"))
 df$con1 = df$var2
+df$var2 = NULL
+df =CartProduct(df,c("run1","run2","run3"))
+df$run = df$var2
 df$var2 = NULL
 df = CartProduct(df,as.vector(unique(rsa$sub_group)))
 df$region1 = df$var2
 df$var2 = NULL
 df$con1 = as.character(df$con1)
 df$region1 = as.character(df$region1)
+df$run = as.character(df$run)
 
-# before moving forward need to check that this is reasonable way to to do FCONN and that same sequences are being correlated 
-tstatdat = pmap(df,fconn_func1,region2 = "HIPP", run="run1")
-tstatdat = data.frame(matrix(unlist(tstatdat), nrow=594, byrow=T))
-tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="rval","X3"="sub","X4"="condition","X5"="region1","X6"="region2"))
+
+tstatdat = pmap(df,fconn_func1,region2 = "HIPP")
+tstatdat = data.frame(matrix(unlist(tstatdat), nrow=2673, byrow=T))
+tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="rval","X3"="sub","X4"="condition","X5"="region1","X6"="region2","X7"="run"))
+
+# drop auto correlations (HIPP with HIPP)
+tstatdat = tstatdat[tstatdat$region1 != "HIPP",]
+# fix this
+tstatdat$rval = as.numeric(as.character(tstatdat$rval))
+tstatdat$zval = fisherz(tstatdat$rval)
 
 ```
-
-
 
 ```{r}
-CartProduct = function(CurrentMatrix, NewElement)
-{
- 
-  if (length(dim(NewElement)) != 0 )
-  {
-    warning("New vector has more than one dimension.")
-    return (NULL)
-  }
- 
-  if (length(dim(CurrentMatrix)) == 0)
-  {
-    CurrentRows = length(CurrentMatrix)
-    CurrentMatrix = as.matrix(CurrentMatrix, nrow = CurrentRows, ncol = 1)
-  } else {
-    CurrentRows = nrow(CurrentMatrix)
-  }
- 
-  var1 = replicate(length(NewElement), CurrentMatrix, simplify=F)
-  var1 = do.call("rbind", var1)
- 
-  var2 = rep(NewElement, CurrentRows)
-  var2 = matrix(var2[order(var2)], nrow = length(var2), ncol = 1)
- 
-  CartProduct = cbind(var1, var2)
-  CartProduct$var2 = as.character(CartProduct$var2)
-  return (CartProduct)
-}
+# with hipp as the seed , not much giong on. Effect of target region, trending effect of run, no interactions
+# Lang had main of target and condition*target interaction. Differences between scrambled and random though
+# just target for AT
+# target and run for pm_sub
+# just target for lp and some scrambled random trends
+# target for mpfc
+# target for temporal
+
+dat2 = tstatdat %>% filter(run == "run1")
+
+mtl sub regions?
+a1 = aov_ez("sub", "zval", dat2, within = c("condition","region1"))
+a1
+em1 = emmeans(a1, ~ condition|region1)
+pairs(em1, adjust = NULL)
+
 ```
+
 
 ```{r}
 # adding runnum grouping
