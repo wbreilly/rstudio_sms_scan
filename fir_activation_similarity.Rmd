@@ -1,0 +1,299 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(out.width = "70%")
+```
+
+
+```{r}
+
+library(tidyverse)
+library(afex)
+library(ggforce)
+library('emmeans')
+library(furrr)
+
+
+# rsa = read_csv("fconn_glass_dat.csv")
+# 
+# rsa$sub_group = as.factor(rsa$sub_group)
+# rsa$sub = as.factor(rsa$sub)
+# rsa$runnum = as.factor(rsa$runnum)
+# rsa$condition = as.factor(rsa$condition)
+# rsa$seqnum = as.factor(rsa$seqnum)
+
+
+# SVSS with positions and beta threshold
+rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/univariate_fir_glass_2_23_19.txt", header = TRUE, stringsAsFactors = TRUE)
+
+rsa$runnum = gsub(".nii", "", rsa$runnum)
+
+# write_csv(rsa,"2_25_19_univariate_glasser_df.csv")
+
+# noisiest subject
+bad_subs = c('s001', "s008","s016", "s027","s043", "s032","s039") # , "s041"    
+rsa$drop_subs = rsa$sub %in% bad_subs
+rsa = rsa[!(rsa$drop_subs == TRUE),]
+
+
+# extreme vals
+# rsa$too_low = rsa$similarity < -.5
+# rsa = rsa[!(rsa$too_low == TRUE),]
+# ## a couple that are 1 somehow..
+# rsa$too_high = rsa$similarity > .8
+# rsa = rsa[!(rsa$too_high == TRUE),]
+# drop na's
+rsa = rsa %>% drop_na(bold)
+       
+# condense over different sequences in a condition and different runs
+# rsa = rsa %>% group_by(sub,condition,roi,position,runnum) %>% summarise(similarity = mean(bold)) %>%  ungroup()
+
+# fix roi labels
+rsa$roi = gsub("-", "_", rsa$roi)
+rsa$roi = gsub("reslice_", "", rsa$roi)
+
+# PMAT 3.0 labels
+# modulelabs = read.table("2_18_glasser_pmat_labels_forR.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+# adds node strength
+modulelabs = read.table("2_20_glasser_pmat_nodestrength.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+# convert nodestrength to percentile
+modulelabspct = modulelabs %>%  group_by(Module) %>% mutate(p_node = percent_rank(node_strength)) %>% ungroup()
+topmodulelabs = modulelabspct %>% filter(p_node >= .15)
+
+LANGrois = topmodulelabs %>%  filter(Module == 1)
+PMrois = topmodulelabs %>%  filter(Module == 2)
+ATrois = topmodulelabs %>%  filter(Module == 3)
+
+# LANGrois = modulelabs %>%  filter(Module == 1)
+# PMrois = modulelabs %>%  filter(Module == 2)
+# ATrois = modulelabs %>%  filter(Module == 3)
+
+# problem ROI, needs investigating
+PMrois = PMrois %>%  filter(ROI != "L_s6-8_ROI")
+
+# make networks factor
+rsa$lang = rsa$roi %in% LANGrois$ROI
+rsa$AT = rsa$roi %in% ATrois$ROI
+rsa$PM = rsa$roi %in% PMrois$ROI
+
+rsa$vischeck = grepl(".*V1_ROI",rsa$roi)
+# rsa$vischeck = grepl(".*V\\d.*",rsa$roi)
+
+# now assign group label in single column
+rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$lang == TRUE, "LANG", ifelse(rsa$vischeck == TRUE, "VIS", "other"))))
+
+# delete the logical vectors
+# rsa[,7:10] = NULL
+# make group a factor
+rsa$roi_group = as.factor(rsa$roi_group)
+
+###### adding sub networks 
+mpfc_subgroup = modulelabs %>% filter(sub_group == "mpfc")
+pm_subgroup = modulelabs %>% filter(sub_group == "posterior_medial")
+lp_subgroup = modulelabs %>% filter(sub_group == "lateral_parietal")
+t_subgroup = modulelabs %>% filter(sub_group == "temporal")
+d_subgroup = modulelabs %>% filter(sub_group == "dpfc")
+mtl_subgroup = modulelabs %>% filter(sub_group == "mtl")
+
+rsa$pm_subgroup = rsa$roi %in% pm_subgroup$ROI
+rsa$mpfc_subgroup = rsa$roi %in% mpfc_subgroup$ROI
+rsa$lp_subgroup = rsa$roi %in% lp_subgroup$ROI
+rsa$t_subgroup = rsa$roi %in% t_subgroup$ROI
+rsa$d_subgroup = rsa$roi %in% d_subgroup$ROI
+rsa$mtl_subgroup = rsa$roi %in% mtl_subgroup$ROI
+
+rsa$sub_group = ifelse(rsa$mpfc_subgroup == TRUE, "mpfc", ifelse(rsa$pm_subgroup == TRUE,"pm_sub",ifelse(rsa$lp_subgroup == TRUE, "lp",ifelse(rsa$t_subgroup == TRUE, "temporal",ifelse(rsa$d_subgroup == TRUE, "dorsal",ifelse(rsa$mtl_subgroup == TRUE, "mtl","tbd"))))))
+rsa$sub_group = as.factor(rsa$sub_group)
+
+rsa$othergroup = ifelse(rsa$sub_group == "lp" | rsa$sub_group == "pm_sub", "PM_super","other")
+
+rsa[,8:12] = NULL
+rsa[,9:14] = NULL
+#############
+# rsa = read_csv("2_25_19_univariate_glasser_df.csv")
+
+#################
+# rt  diffs
+rt.diffs =  read.csv("rtdiffs_11_1_18.csv")
+rt.diffs[,1] =NULL 
+
+# rsa$sub_group = ifelse(rsa$sub_group == "tbd" & )
+rsa$sub_group <- as.character(rsa$sub_group)
+rsa$sub_group[rsa$roi_group == "AT" ] = "AT"
+rsa$sub_group[rsa$roi_group == "VIS" ] = "VIS"
+rsa$sub_group[rsa$roi_group == "LANG" ] = "LANG"
+rsa$sub_group = as.factor(rsa$sub_group)
+
+```
+
+
+```{r}
+CartProduct = function(CurrentMatrix, NewElement)
+{
+  if (length(dim(NewElement)) != 0 )
+  {
+    warning("New vector has more than one dimension.")
+    return (NULL)
+  }
+  if (length(dim(CurrentMatrix)) == 0)
+  {
+    CurrentRows = length(CurrentMatrix)
+    CurrentMatrix = as.matrix(CurrentMatrix, nrow = CurrentRows, ncol = 1)
+  } else {
+    CurrentRows = nrow(CurrentMatrix)
+  }
+  var1 = replicate(length(NewElement), CurrentMatrix, simplify=F)
+  var1 = do.call("rbind", var1)
+  var2 = rep(NewElement, CurrentRows)
+  var2 = matrix(var2[order(var2)], nrow = length(var2), ncol = 1)
+  CartProduct = cbind(var1, var2)
+  CartProduct$var2 = as.character(CartProduct$var2)
+  return (CartProduct)
+}
+```
+
+
+```{r}
+# adding runnum grouping
+actsim_func1 = function(region1,region2)
+  {
+  # grab grouped/meaned data for each condition 
+  temp.df = rsa %>% filter(roi == region1) 
+  temp.df = droplevels(temp.df)
+  dat1 = temp.df$bold
+  
+  temp.df = rsa %>% filter(roi == region2) 
+  temp.df = droplevels(temp.df)
+  dat2 = temp.df$bold
+  
+  # run pearson
+  if (length(dat1) == length(dat2)  && length(dat1) > 0){
+    print(region1)
+    print(region2)
+    result = cor.test(dat1, dat2)
+    pval = result$p.value
+    rval = result$estimate
+  
+    out = c(pval,unname(rval),region1,region2)
+    return(out)
+  } else {
+    # sprintf('problem with %s and %s !!!',region1,region2)
+  }
+}
+```
+
+```{r}
+
+allrois = bind_rows(PMrois,ATrois,LANGrois)
+
+df= data.frame(region1 = as.vector(allrois$ROI), stringsAsFactors = FALSE)
+df = CartProduct(df,as.vector(allrois$ROI))
+df$region2 = df$var2
+df$var2 = NULL
+
+df= data.frame(region1 = as.vector(allrois$ROI), stringsAsFactors = FALSE)
+df2= data.frame(region2 = as.vector(allrois$ROI), stringsAsFactors = FALSE)
+df3 = crossing(df,df2)
+
+
+
+tstatdat = pmap(df3,actsim_func1)
+tstastlist = tstatdat
+tstatdat = data.frame(matrix(unlist(tstatdat), nrow=11881, byrow=T))
+tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="rval","X3"="region1","X4"="region2"))
+# 
+# # drop auto correlations (HIPP with HIPP)
+# tstatdat = tstatdat[tstatdat$region1 != "HIPP",]
+# # fix this
+tstatdat$rval = as.numeric(as.character(tstatdat$rval))
+library(psych)
+tstatdat$zval = fisherz(tstatdat$rval)
+tstatdatcopy = tstatdat
+```
+
+```{r}
+
+# remove duplicate rows, not sure why they exist
+lookatdups = tstatdat[duplicated(tstatdat),]
+# that's a lot of dups..432.. should probably figure that out
+# these are the only region1 rois in duplicateds  L_8Ad_ROI L_9p_ROI  R_8Ad_ROI L_PGi_ROI L_PGs_ROI
+tstatdat = distinct(tstatdat)
+tstatdat = tstatdat[!tstatdat$region1 %in% c( "L_8Ad_ROI", "L_9p_ROI",  "R_8Ad_ROI", "L_PGi_ROI", "L_PGs_ROI"),]
+tstatdat = tstatdat[!tstatdat$region2 %in% c( "L_8Ad_ROI", "L_9p_ROI",  "R_8Ad_ROI", "L_PGi_ROI", "L_PGs_ROI"),]
+
+tstatdat$pm_subgroup1 = tstatdat$region1 %in% PMrois$ROI
+tstatdat$pm_subgroup2 = tstatdat$region2 %in% PMrois$ROI
+tstatdat$at_subgroup1 = tstatdat$region1 %in% ATrois$ROI
+tstatdat$at_subgroup2 = tstatdat$region2 %in% ATrois$ROI
+tstatdat$lang_subgroup1 = tstatdat$region1 %in% LANGrois$ROI
+tstatdat$lang_subgroup2 = tstatdat$region2 %in% LANGrois$ROI
+
+tstatdat$pm_group = ifelse(tstatdat$pm_subgroup1 == TRUE & tstatdat$pm_subgroup2 == TRUE, "PM","other")
+tstatdat$at_group = ifelse(tstatdat$at_subgroup1 == TRUE & tstatdat$at_subgroup2 == TRUE, "AT","other")
+tstatdat$lang_group = ifelse(tstatdat$lang_subgroup1 == TRUE & tstatdat$lang_subgroup2 == TRUE, "LANG","other")
+
+tstatdat$roi_group = ifelse(tstatdat$pm_group == "PM","PM", ifelse(tstatdat$at_group == "AT","AT", ifelse(tstatdat$lang_group == "LANG","LANG","between")))
+tstatdat[,6:14] = NULL
+
+tstatdat = arrange(tstatdat,region1,region2,roi_group,desc(zval))
+
+checkfirst = tstatdat[match("PM", tstatdat$roi_group),]
+
+justPM = tstatdat %>% filter(roi_group == "PM")
+pm_mtx = matrix(justPM$zval,nrow=43,ncol=43,byrow = FALSE )
+image(pm_mtx, col=viridis(64))
+
+justAT = tstatdat %>% filter(roi_group == "AT")
+at_mtx = matrix(justAT$zval,nrow=22,ncol=22,byrow = FALSE )
+image(at_mtx, col=viridis(64))
+
+justLANG = tstatdat %>% filter(roi_group == "LANG")
+lang_mtx = matrix(justLANG$zval,nrow=37,ncol=37,byrow = FALSE )
+image(lang_mtx, col=viridis(64))
+
+
+act_mtx = matrix(tstatdat$zval,nrow = 102,ncol = 102,byrow = FALSE)
+image(act_mtx, col=viridis(64)) # zlim = 
+
+```
+
+```{r}
+a1 = aov_ez(zval, tstatdat, between  = c("roi_group"))
+a1
+em1 = emmeans(a1, ~ condition|region1)
+pairs(em1, adjust = NULL)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
