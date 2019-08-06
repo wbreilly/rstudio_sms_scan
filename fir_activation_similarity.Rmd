@@ -162,13 +162,13 @@ CartProduct = function(CurrentMatrix, NewElement)
 actsim_func1 = function(region1,region2)
   {
   # grab grouped/meaned data for each condition 
-  temp.df = rsa %>% filter(roi == region1) 
+  temp.df = rsa %>% filter(roi == region1) %>% group_by(condition,sub) %>% summarise(meanbold = mean(bold)) %>% ungroup()
   temp.df = droplevels(temp.df)
-  dat1 = temp.df$bold
+  dat1 = temp.df$meanbold
   
-  temp.df = rsa %>% filter(roi == region2) 
+  temp.df = rsa %>% filter(roi == region2)  %>% group_by(condition,sub) %>% summarise(meanbold = mean(bold)) %>% ungroup()
   temp.df = droplevels(temp.df)
-  dat2 = temp.df$bold
+  dat2 = temp.df$meanbold
   
   # run pearson
   if (length(dat1) == length(dat2)  && length(dat1) > 0){
@@ -189,11 +189,6 @@ actsim_func1 = function(region1,region2)
 ```{r}
 
 allrois = bind_rows(PMrois,ATrois,LANGrois)
-
-df= data.frame(region1 = as.vector(allrois$ROI), stringsAsFactors = FALSE)
-df = CartProduct(df,as.vector(allrois$ROI))
-df$region2 = df$var2
-df$var2 = NULL
 
 df= data.frame(region1 = as.vector(allrois$ROI), stringsAsFactors = FALSE)
 df2= data.frame(region2 = as.vector(allrois$ROI), stringsAsFactors = FALSE)
@@ -239,7 +234,7 @@ tstatdat$lang_group = ifelse(tstatdat$lang_subgroup1 == TRUE & tstatdat$lang_sub
 tstatdat$roi_group = ifelse(tstatdat$pm_group == "PM","PM", ifelse(tstatdat$at_group == "AT","AT", ifelse(tstatdat$lang_group == "LANG","LANG","between")))
 tstatdat[,6:14] = NULL
 
-tstatdat = arrange(tstatdat,region1,region2,roi_group,desc(zval))
+tstatdat = arrange(tstatdat,region1,region2,roi_group) # ,roi_group,desc(zval)
 
 checkfirst = tstatdat[match("PM", tstatdat$roi_group),]
 
