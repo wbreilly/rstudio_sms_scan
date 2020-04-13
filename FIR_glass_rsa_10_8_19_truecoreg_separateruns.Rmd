@@ -1,5 +1,5 @@
 ---
-title: "rsa_fir_glass_12_30_18"
+title: "rsa_fir_glass_separateruns_10_8_19"
 author: "WBR"
 date: "10/24/2018"
 output: html_document
@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # knitr::opts_chunk$set(out.width = "70%")
 ```
 
-## ## Bold data but renamed similarity so plotting is compatible!!
+## Load and prepare data 
 
 ```{r}
 # RSA sum stats
@@ -21,10 +21,7 @@ library('emmeans')
 library(parallel) 
 
 # SVSS with positions and beta threshold
-rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/univariate_fir_glass_2_23_19.txt", header = TRUE, stringsAsFactors = TRUE)
-
-
-# write_csv(rsa,"2_25_19_univariate_glasser_df.csv")
+rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/RSAmeans_fir_glass_10_7_19_5ptile_atanh_separate_runs.txt", header = TRUE, stringsAsFactors = TRUE)
 
 # noisiest subject
 bad_subs = c('s001', "s008","s016", "s027","s043", "s032","s039") # , "s041"    
@@ -32,17 +29,25 @@ rsa$drop_subs = rsa$sub %in% bad_subs
 rsa = rsa[!(rsa$drop_subs == TRUE),]
 
 
-# extreme vals
+# extreme pearson vals
 # rsa$too_low = rsa$similarity < -.5
 # rsa = rsa[!(rsa$too_low == TRUE),]
 # ## a couple that are 1 somehow..
 # rsa$too_high = rsa$similarity > .8
 # rsa = rsa[!(rsa$too_high == TRUE),]
+
+# extreme z vals
+rsa$too_low = rsa$similarity < -1
+rsa = rsa[!(rsa$too_low == TRUE),]
+## a couple that are 1 somehow..
+rsa$too_high = rsa$similarity > 1
+rsa = rsa[!(rsa$too_high == TRUE),]
+rsa = rsa[!(rsa$similarity == "-Inf"),]
+
 # drop na's
-rsa = rsa %>% drop_na(bold)
+rsa = rsa %>% drop_na(similarity)
        
-# condense over different sequences in a condition and different runs
-rsa = rsa %>% group_by(sub,condition,roi,position) %>% summarise(similarity = mean(bold)) %>%  ungroup()
+# rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity)) %>% ungroup()
 
 # fix roi labels
 rsa$roi = gsub("-", "_", rsa$roi)
@@ -60,23 +65,7 @@ rsa$roi = gsub("reslice_", "", rsa$roi)
 # PMrois = topmodulelabs %>%  filter(Module == 2)
 # ATrois = topmodulelabs %>%  filter(Module == 3)
 # 
-# # LANGrois = modulelabs %>%  filter(Module == 1)
-# # PMrois = modulelabs %>%  filter(Module == 2)
-# # ATrois = modulelabs %>%  filter(Module == 3)
-# 
-# # problem ROI, needs investigating
-# PMrois = PMrois %>%  filter(ROI != "L_s6-8_ROI")
-# 
-# # make networks factor
-# rsa$lang = rsa$roi %in% LANGrois$ROI
-# rsa$AT = rsa$roi %in% ATrois$ROI
-# rsa$PM = rsa$roi %in% PMrois$ROI
-# 
-# rsa$vischeck = grepl(".*V1_ROI",rsa$roi)
-# # rsa$vischeck = grepl(".*V\\d.*",rsa$roi)
-# 
-# # now assign group label in single column
-# rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$lang == TRUE, "LANG", ifelse(rsa$vischeck == TRUE, "VIS", "other"))))
+
 
 # 10_9_19 4net module labs
 modulelabs = read.table("4net_labels_10_9_19.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
@@ -103,9 +92,10 @@ rsa$FPN = rsa$roi %in% FPNrois$ROI
 rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$LAT == TRUE, "LAT", ifelse(rsa$FPN == TRUE, "FPN", "other"))))
 
 # delete the logical vectors
-rsa[,6:9] = NULL
+rsa[,7:13] = NULL
 # make group a factor
 rsa$roi_group = as.factor(rsa$roi_group)
+
 
 # ###### adding sub networks 
 # mpfc_subgroup = modulelabs %>% filter(sub_group == "mpfc")
@@ -125,23 +115,24 @@ rsa$roi_group = as.factor(rsa$roi_group)
 # rsa$sub_group = ifelse(rsa$mpfc_subgroup == TRUE, "mpfc", ifelse(rsa$pm_subgroup == TRUE,"pm_sub",ifelse(rsa$lp_subgroup == TRUE, "lp",ifelse(rsa$t_subgroup == TRUE, "temporal",ifelse(rsa$d_subgroup == TRUE, "dorsal",ifelse(rsa$mtl_subgroup == TRUE, "mtl","tbd"))))))
 # rsa$sub_group = as.factor(rsa$sub_group)
 # 
+# rsa[,8:13] = NULL
 # 
-# 
-# rsa$othergroup = ifelse(rsa$sub_group == "lp" | rsa$sub_group == "pm_sub", "PM_super","other")
-# 
-# rsa[,7:12] = NULL
+# rsa$othergroup = ifelse(rsa$sub_group == "lp" | rsa$sub_group == "pm_sub", "PM_super",ifelse(rsa$sub_group == "dorsal" | rsa$sub_group == "mpfc","pfc","other"))
+# | rsa$sub_group == "temporal"
 
-#############
-# rsa = read_csv("2_25_19_univariate_glasser_df.csv")
-
+rsa$dropthis = rsa$sub == "s002" & rsa$roi == "R_SFL_ROI"
+rsa = rsa[!(rsa$dropthis == TRUE),]
 #################
 # rt  diffs
 rt.diffs =  read.csv("rtdiffs_11_1_18.csv")
 rt.diffs[,1] =NULL 
 
+rsa$runpair = as.factor(rsa$runpair)
+rsa$position = as.factor(rsa$position)
+rsa$roi = as.factor(rsa$roi)
 ```
 
-## Bold data but renamed similarity so plotting is compatible!!
+## temporary putting freesurfer ROI data in chunk below copied from FIR_10_31_18_truecoreg
 ```{r}
 # RSA sum stats
 library(tidyverse)
@@ -152,7 +143,7 @@ library('emmeans')
 
 
 # SVSS with positions and beta threshold
-rsa = rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/univariate_FSants_6_28_19.txt", header = TRUE, stringsAsFactors = TRUE)
+rsa = read.table("/Users/wbr/walter/fmri/sms_scan_analyses/rsa_singletrial/rsa_fir/RSAmeans_fir_FS_2_25_19_5ptile.txt", header = TRUE, stringsAsFactors = TRUE)
 
 # noisiest subject
 bad_subs = c('s001', "s008","s016", "s027","s043","s032","s039") # , "s041"
@@ -160,17 +151,11 @@ rsa$drop_subs = rsa$sub %in% bad_subs
 rsa = rsa[!(rsa$drop_subs == TRUE),]
 
 # s022 rh-prc is messed up, 20 most negatvie correlations in whole dataset. NA all of those for time being
-# rsa$too_low = rsa$similarity < -.4
-# rsa = rsa[!(rsa$too_low == TRUE),]
-# ## a couple that are 1 somehow..
-# rsa$too_high = rsa$similarity > .8
-# rsa = rsa[!(rsa$too_high == TRUE),]
-
-# drop na's
-rsa = rsa %>% drop_na(bold)
-       
-# condense over different sequences in a condition and different runs
-rsa = rsa %>% group_by(sub,condition,roi,position) %>% summarise(similarity = mean(bold)) %>%  ungroup()
+rsa$too_low = rsa$similarity < -.4
+rsa = rsa[!(rsa$too_low == TRUE),]
+## a couple that are 1 somehow..
+rsa$too_high = rsa$similarity > .8
+rsa = rsa[!(rsa$too_high == TRUE),]
        
 rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(similarity), sd = sd(similarity)) %>% ungroup()
 
@@ -178,7 +163,7 @@ rsa.sumstats = rsa %>% group_by(roi, condition) %>% summarise(mean = mean(simila
 # the rois
 PM_rois = c('near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
 AT_rois = c('near-prc-L',	'near-prc-R', 	'lh-TPole', 	'rh-TPole', 'lh-OFC', 'rh-OFC')
-HIPP_rois = c('near_hipp_body_L',	'near_hipp_body_R',	'near_hipp_head_L',	'near_hipp_head_R', 'near_hipp_tail_L', 'near_hipp_tail_R')
+HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 'near-hipp-tail-L', 'near-hipp-tail-R')
 PM_HIPP_rois = c('near-hipp-body-L',	'near-hipp-body-R',	'near-hipp-head-L',	'near-hipp-head-R', 
                  'near-phc-ant-L', 'near-phc-ant-R', 'lh-ANG', 'rh-ANG', 'lh-PCC', 'rh-PCC',	'lh-Prec',	'rh-Prec', 'lh-RSC', 'rh-RSC')
 IFG= c( 'lh-inf-opercular', 'lh-inf-triang', 'rh-inf-opercular', 'rh-inf-triang', 'rh-inf-orbital', 'lh-inf-orbital')
@@ -197,7 +182,7 @@ rsa$frontal = rsa$roi %in% frontal
 
 # now assign group label in single column
 # rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", "Other" )))
-rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", ifelse(rsa$frontal == TRUE, "frontal", ifelse(rsa$IFG == TRUE, "IFG","Other")))))
+rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$HIPP == TRUE,"HIPP", ifelse(rsa$IFG == TRUE, "IFG","Other"))))
 # delete the logical vectors
 rsa[,6:11] = NULL
 # make group a factor
@@ -218,7 +203,7 @@ rsa$roi = gsub(".*prc-R$", "rh-prc", rsa$roi)
 ########################
 # PMAT AT and HIPP only
 rsa.PMAT = rsa %>% filter(roi_group != "Other") %>% filter(roi_group != "IFG")  %>% filter(roi_group != "frontal")
-rsa.frontal = rsa %>% filter(rsa$roi_group == "frontal")
+rsa.frontal = rsa %>% filter(rsa$frontal == TRUE)
 
 # rt  diffs
 rt.diffs =  read.csv("rtdiffs_11_1_18.csv")
@@ -236,19 +221,18 @@ HIPP_labs = c('lh-hipp-body','rh-hipp-body','lh-hipp-head','rh-hipp-head','lh-hi
 ## Plot by network cluster
 
 ```{r fig.width = 12, fig.asp = .62}
-clust.fig.dat = rsa  %>% filter(position %in% 1:25)  %>% group_by(sub,condition,roi_group) %>% summarise(similarity = mean(similarity))
-clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group) + scale_y_continuous(limits = c(-.03, .025)) + geom_jitter()
-
-clusters.rois = clusters.rois + ylab("BOLD") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled"))
+clust.fig.dat = rsa  %>% filter(position %in% 1:10) %>% group_by(sub,condition,roi_group,runpair) %>% summarise(similarity = mean(similarity))
+clusters.rois = ggplot(data = clust.fig.dat, aes(x = factor(condition), y = similarity))  + geom_boxplot(outlier.shape = NA)  +  facet_wrap( ~roi_group+runpair) + scale_y_continuous(limits = c(-.05, .2))
+clusters.rois = clusters.rois + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -90,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled"))
 clusters.rois
 ```
 
 ```{r}
 rsa.PM = rsa %>% filter(roi_group == "PM")
-line.dat = rsa.PMAT  %>% filter(roi == "rh-Prec")%>%  group_by(condition,position) %>% summarise(similarity = mean(similarity))
+line.dat = rsa.PM   %>%  group_by(condition,position,runpair) %>% summarise(similarity = mean(similarity))
 
 
-PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity))   + geom_smooth(aes(linetype=condition),method="loess") # + facet_wrap(~roi)# + scale_y_continuous(limits = c(-.05, .3))
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity))   + geom_smooth(aes(linetype=condition),method="loess")  + facet_wrap(~runpair)# + scale_y_continuous(limits = c(-.05, .3))
 # PM.check = PM.check + ylab("Similarity") + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact","Same Position","Scrambled")) 
 PM.line
 
@@ -257,12 +241,12 @@ PM.line
 ### facet line plots
 
 ```{r}
+rsa.PM = rsa %>% filter(roi_group == "AT")
+# rsa.PM = rsa %>% filter(rsa$roi == "lh-occ-pole" | rsa$roi == "rh-occ-pole")
+line.dat = rsa.PM  %>% group_by(condition,position,runpair) %>% summarise(similarity = mean(similarity))
 
-rsa.PM = rsa %>% filter(rsa$roi == "lh-occ-pole" | rsa$roi == "rh-occ-pole")
-line.dat = rsa.PM  %>% group_by(condition,position,roi) %>% summarise(similarity = mean(similarity))
 
-
-PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) + facet_wrap(~roi) 
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity)) + geom_line(aes(linetype=condition)) + facet_wrap(~runpair) 
   # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
   
 PM.line
@@ -289,18 +273,18 @@ PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = simila
 ### poster quality line plots
 ```{r}
 
-# post_rois = c("L_V1_ROI", "R_V1_ROI", "L_V2_ROI", "R_V2_ROI")
-# post_rois = unique(LANGrois$ROI)
-# post_rois = unique(PMrois$ROI)
-post_rois = unique(ATrois$ROI)
-# post_rois = "L_V1_ROI"
+
+rsasubgroup = rsa %>% filter(rsa$roi_group == "FPN")
+post_rois = unique(rsasubgroup$roi)
+# post_rois = c("L_PSL_ROI","L_55b_ROI")
+
 
 for (iroi in 1:length(post_rois)) {
 # rsa.PM = rsa %>% filter(rsa$frontal == TRUE)
-line.dat = rsa %>%  filter(roi == post_rois[iroi]) %>% filter(condition != "random") %>%  group_by(condition,position) %>% summarise(similarity = mean(similarity)) 
+line.dat = rsa %>%  filter(roi == post_rois[iroi]) %>% filter(condition != "random") %>%  group_by(condition,position,runpair) %>% summarise(similarity = mean(similarity)) 
 
 
-PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity, colour = condition)) + geom_line(size = 2) +geom_point(size = 2) # aes(linetype=condition) 
+PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity, colour = condition)) + geom_line(size = 2) +geom_point(size = 2) +facet_wrap(~runpair)# aes(linetype=condition) 
 PM.line = PM.line + scale_color_brewer(palette = "Dark2") + theme(text = element_text(size = 30, face = "bold")) + theme(strip.background = element_blank(),strip.text= element_blank()) + theme(legend.position="none") + xlab("timepoint")
 PM.line
 
@@ -308,7 +292,7 @@ PM.line
 #+  facet_wrap_paginate(~roi,nrow=3,ncol=2,page = ipage) 
   # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
 
-  fname = sprintf("glasser_3network_plots/AT_%s_timcourse.pdf", post_rois[iroi])
+  fname = sprintf("oct19_sep_runpairs_plots/FPN_%s_timcourse_win0.pdf", post_rois[iroi])
   ggsave(fname, plot = PM.line, dpi = 600,width = 8, height = 5,units = "in")
 }
 ```
@@ -318,7 +302,7 @@ PM.line
 ```{r}
 
 indie.sub.plots = function(cur_sub,region){
-rsa.PM = rsa %>% filter(rsa$roi == region) %>% filter(condition != "random")
+rsa.PM = rsa %>% filter(rsa$roi == region)
 line.dat = rsa.PM %>% filter(sub == cur_sub) %>% group_by(condition,position) %>% summarise(similarity = mean(similarity))
 
 
@@ -330,7 +314,7 @@ PM.line
 ```
 
 ```{r}
-lapply(unique(rsa$sub),indie.sub.plots, region = "near_hipp_head_R")
+lapply(unique(rsa$sub),indie.sub.plots, region = "rh-Prec")
 
 ```
 
@@ -352,44 +336,15 @@ pairs(em1, adjust = NULL)
 ###########################
 # network level sliding window ttests!
 
-```{r}
-
-# post_rois = c("L_V1_ROI", "R_V1_ROI", "L_V2_ROI", "R_V2_ROI")
-# post_rois = unique(LANGrois$ROI)
-# post_rois = PM_labs
-# post_rois = c("L_A1_ROI","R_A1_ROI")
-check = rsa %>% filter(roi_group == "LANG")
-post_rois =unique(check$roi)
-# post_rois = unique(ATrois$ROI)
-# post_rois = "L_V1_ROI"
-
-for (iroi in 1:length(post_rois)) {
-# rsa.PM = rsa %>% filter(rsa$frontal == TRUE)
-line.dat = rsa %>%  filter(roi == post_rois[iroi]) %>% filter(condition != "random") %>%  group_by(condition,position) %>% summarise(similarity = mean(similarity)) 
-
-
-PM.line = ggplot(data = line.dat, aes(x = position,group = condition, y = similarity, colour = condition)) + geom_line(size = 2) +geom_point(size = 2) # aes(linetype=condition) 
-PM.line = PM.line + scale_color_brewer(palette = "Dark2") + theme(text = element_text(size = 30, face = "bold")) + theme(strip.background = element_blank(),strip.text= element_blank()) + theme(legend.position="none") + xlab("timepoint") + ylab("BOLD")
-PM.line
-
-# + scale_color_manual(values = c("1B9E77","D95F02","7570B3"))
-#+  facet_wrap_paginate(~roi,nrow=3,ncol=2,page = ipage) 
-  # + theme(text = element_text(size = 30, face = "bold"),axis.title.x=element_blank(),axis.text.x=element_text(angle = -45,hjust = 0)) + scale_x_discrete(labels = c("Intact", "Same Verb","Same Position","Scrambled"))
-
-  fname = sprintf("march19_uni_glass_conplots/%s_timcourse.pdf", post_rois[iroi])
-  ggsave(fname, plot = PM.line, dpi = 600,width = 8, height = 5,units = "in")
-}
-```
-
 ### changed roi_group!!!!!
 ```{r}
 wbr.sliding.ttest.network = function(midval,region,winval,con1,con2) {
 # grab grouped/meaned data for each condition 
-temp.df = rsa %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(sub_group == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat1 = temp.df$similarity
 
-temp.df = rsa %>% filter(roi == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(sub_group == region) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat2 = temp.df$similarity
 
@@ -402,27 +357,51 @@ if (length(dat1) == length(dat2)  && length(dat1) > 0){
   out = c(pval,tval)
   return(out)
 } else {
-  sprintf('problem with %s !!!',region )
+  fprint('problem with %s !!!',region )
 }
 }
 ```
 
 ```{r}
-# use this to get the true tstats for every timepoint. Chunk below will be used to ID cluster mass threshold
-tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="near_hipp_head_R",con1="intact",con2="scrambled")
+# use this to get the true tstats for every timepoint. 
+tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="temporal",con1="intact",con2="scrambled")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
 
 #plot that shit
 tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  +
-geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-4.5 , 3.5),breaks = c(-4,-3,-2,-1,0,1,2,3))
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-2.25 , 3.5),breaks = c(-2,-1,0,1,2,3))
   # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
 
 tstat.plot
-# ggsave("march19_uni_tstat/tstat_pmmtl.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+# ggsave("pm_subnet_tstatlineplots/sliding.tstat_pmmtl.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
 ```
 
+# put a bunch of line plots on the same figure
+# this uses make_tval_df and wbr.sliding.ttest which are below
+```{r}
+tempdf = rsa %>% filter(roi_group == "LANG")
+cur_rois = unique(tempdf$roi)
+# cur_rois = droplevels(cur_rois)
+list_of_dfs = NULL
+list_of_dfs = lapply(cur_rois,make_tval_df)
+multiplot_dat = do.call(rbind,list_of_dfs)
+
+#plot that shit
+tstat.plot = ggplot(data = multiplot_dat,(aes(x =timepoint , y= tval,group =ROI)))  + geom_point(size = 1) +geom_line(size =1) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  + theme(legend.position="none") +
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-2.25 , 3.5),breaks = c(-2,-1,0,1,2,3))
+  # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
+
+tstat.plot
+# ggsave("pm_subnet_tstatlineplots/mpfc_allrois_tstatline.pdf", plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
+
+```
+
+```{r}
+
+
+```
 #########################
 correct for timepoint MC with permutation tests
 
@@ -430,11 +409,11 @@ correct for timepoint MC with permutation tests
 ```{r}
 make.sliding.df = function(midval,network,winval,con1,con2) {
 # grab grouped/meaned data for each condition 
-temp.df = rsa %>% filter(roi_group == network) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(sub_group == network) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 temp.df = droplevels(temp.df)
 dat1 = temp.df$similarity
 
-temp.df = rsa %>% filter(roi_group == network) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
+temp.df = rsa %>% filter(sub_group == network) %>% filter(condition == con2) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
 dat2 = temp.df$similarity
 
 temp.df$diff = dat1-dat2
@@ -455,7 +434,7 @@ no_cores = detectCores() - 1
 cl = makeCluster(no_cores,type = "FORK")
 
 list_of_dfs = NULL
-list_of_dfs = parLapply(cl,1:32,make.sliding.df,winval=0,network="PM",con1="intact",con2="scrambled")
+list_of_dfs = parLapply(cl,1:32,make.sliding.df,winval=0,network="temporal",con1="intact",con2="scrambled")
 timecourse_dat= do.call(rbind,list_of_dfs)
 
 stopCluster(cl)
@@ -494,15 +473,15 @@ perm.data = function(permnum){
 # calls ttest funky to run ttests for each timepoint
 evaltval = function(data){
   temp_timecourse_dat = data
-  tvals = unlist(lapply(1:25,ttestfunky,temp_timecourse_dat))
-  # maxt = max(tvals)
-  mint = min(tvals)
+  tvals = unlist(lapply(5:10,ttestfunky,temp_timecourse_dat))
+  maxt = max(tvals)
+  # mint = min(tvals)
   # if (abs(maxt) > abs(mint)){
   #   outval = maxt
   # } else {
   #   outval = mint
   # }
-  outval = mint
+  outval = maxt
   return(outval)
   
   # cluster size instead of max tval
@@ -521,8 +500,9 @@ run.the.perms = function(permnum){
   outval = evaltval(temp_timecourse_dat)
   return(outval)
 }
-
 ```
+
+
 
 ### finally run the perms
 ```{r}
@@ -545,17 +525,17 @@ perm.df = perm.df %>% mutate(ptile = percent_rank(permhist))
 
 ```{r}
 # plot every subject's condition difference timecourse to spot check
-time.diff.plot = ggplot(data = timecourse_dat,(aes(x =timepoint , y= diff,group =sub)))  + geom_point(size = 1) +geom_line(size =1) + theme(text = element_text(size = 30, face = "bold"))  + ylab("diff")  +
-geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-.025 , .025),breaks = c())
+time.diff.plot = ggplot(data = temp_timecourse_dat,(aes(x =timepoint , y= permdiff,group =sub)))  + geom_point(size = 1) +geom_line(size =1) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  +
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-.15 , .15),breaks = c())
   # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
 
 time.diff.plot
 ```
 
+
 #########
 # sliding window ttests for individual regions!
 ################################
-
 ```{r}
 wbr.sliding.ttest = function(midval,region,winval,con1,con2) {
   temp.df = rsa %>% filter(roi == region) %>% filter(condition == con1) %>%   filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub) %>% summarise(similarity = mean(similarity)) %>%  ungroup()
@@ -577,13 +557,17 @@ if (length(dat1) == length(dat2) && length(dat1) > 0){
   return(out)
   
 } else {
-  print(sprintf('problem with %s !!!',region))
+  pval = NA
+  tval = NA
+  out = c(pval,tval)
+  return(out)
+  # print(sprintf('problem with %s !!!',region))
 }
 }
 ```
 
 ```{r}
-tstatdat = lapply(1:32,wbr.sliding.ttest,winval=0,region="L_POS1_ROI",con1="intact",con2="scrambled")
+tstatdat = lapply(1:32,wbr.sliding.ttest,winval=0,region="L_V1_ROI",con1="intact",con2="scrambled")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
@@ -610,19 +594,19 @@ tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
 
 #plot that shit
 tstat.plot = ggplot(data = tstatdat,(aes(x =timepoint , y= tval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("t stat")  +
-geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-3 , 3.5),breaks = c(-2,-1,0,1,2,3))
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits= c(-3 , 4),breaks = c(-2,-1,0,1,2,3,4))
 # +
   # geom_segment(x = 18,y =-.25,xend= 18,yend = .25, color = "red",size=.75) 
 
 # tstat.plot
-fname = sprintf("march19_uni_glass_tstatplots/LANG_%s_timcourse.pdf", inputroi)
+fname = sprintf("LANG_tstat_plots_win0/%s_tstat_win0_z.pdf", inputroi)
 ggsave(fname, plot = tstat.plot, dpi = 600,width = 8, height = 5,units = "in")
 }
 ```
 
 ```{r echo = FALSE results='hide'}
-tempdf = rsa %>% filter(roi_group == "LANG")
-cur_rois = unique(tempdf$roi)
+temp_df = rsa %>% filter(roi_group == "LANG")
+cur_rois = unique(temp_df$roi)
 # cur_rois = droplevels(cur_rois)
 lapply(cur_rois,tstat_line_region)
 ```
@@ -645,6 +629,7 @@ make_tval_df = function(inputroi){
 
 ```
 
+# brain movie by network
 ```{r}
 # put all the pieces together
 cur_rois = unique(PMrois$ROI)
@@ -668,35 +653,39 @@ list_of_dfs = lapply(cur_rois,make_tval_df)
 brain_movie_datLANG = do.call(rbind,list_of_dfs)
 brain_movie_datLANG$network = "LANG"
 
-brain_movie_dat = bind_rows(brain_movie_datPM,brain_movie_datAT,brain_movie_datLANG)
+# brain_movie_dat = bind_rows(brain_movie_datPM,brain_movie_datAT,brain_movie_datLANG)
 ```
 
 ```{r}
+#  R_7Am, L_5L, L_DVT had problem timepoints in RSA but not univariate with ttests
+rsa = rsa[!(rsa$roi == "R_7Am_ROI"),]
+rsa = rsa[!(rsa$roi == "L_5L_ROI"),]
+rsa = rsa[!(rsa$roi == "L_DVT_ROI"),]
+rsa = rsa[!(rsa$roi == "L_H_ROI"),]
+rsa = rsa[!(rsa$roi == "R_H_ROI"),]
+rsa = rsa[!(rsa$roi == "R_7Pm_ROI"),]
+rsa = rsa[!(rsa$roi == "R_5mv_ROI"),]
+rsa = rsa[!(rsa$roi == "R_6ma_ROI"),]
+rsa = rsa[!(rsa$roi == "R_POS2_ROI"),]
+
 cur_rois = unique(rsa$roi)
 # cur_rois = droplevels(cur_rois)
+
 list_of_dfs = NULL
+brain_movie_dat = NULL
 list_of_dfs = lapply(cur_rois,make_tval_df)
 brain_movie_dat = do.call(rbind,list_of_dfs)
-
-
 ```
-
 
 
 ```{r}
 # make sure that data brought into matlab from excel are sorted such that all timepoints in the first roi are added then the next roi all timepoints
-write_csv(brain_movie_dat, "brainmoviedata_univariate_allglass_3_5_19.csv")
+# also, fsleyes and many other programs will restrict the negative range to the max value. i.e., if the max is 3, and your data has a value of -4, it shows up as -3..... -_-.......
+write_csv(brain_movie_dat, "brainmoviedata_rsa_allglass_win0_3_5_19.csv")
 
 rois = unique(brain_movie_dat$ROI)
-write_csv(data.frame(rois),"unique_rois_all.csv")
+write_csv(data.frame(rois),"rsa_unique_rois.csv")
 ```
-
-
-
-
-
-
-
 
 
 
@@ -872,11 +861,12 @@ lapply(unique(rsa$roi),wbr.last5.corrplot)
 
 ```{r}
 
+## changed from by region to othergroup!!
 wbr.anyps.corrplot = function(region,pstart,pend) {
 rsa.diff.ps = rsa %>% filter(sub != "s023") 
 # 
 
-rsa.diff.ps = rsa.diff.ps %>% filter(position %in% pstart:pend) %>% group_by(sub,condition,roi_group) %>% filter(roi == region, condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% pstart:pend) %>% group_by(sub,condition,sub_group) %>% filter(sub_group == region, condition != "random") %>% summarise(simmean = mean(similarity))
 rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
 rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
 rsa.diff.ps = data.frame(rsa.diff.ps)
@@ -897,27 +887,24 @@ return()
 pval = sprintf('p = %.3f;',as.numeric(fromcor[3]))
 rval = sprintf('r = %.3f;',as.numeric(fromcor[4]))
 prange = sprintf('Timepoint %d to %d',pstart,pend)
-# prange = sprintf('Timepoint %d',pstart)
 # positive rt means faster on intact than scrambled 
 # positive ps means higher ps for intact 
 
  
 corr.plot = ggplot(data = rsa.diff.ps,(aes(x = psdiffs, y= rtdiffs)))  + geom_point(size = 3) +   geom_smooth(method='lm')
-corr.plot = corr.plot  + theme(legend.position="none") + labs(x = "BOLD Difference", y = "Reaction Time Difference") + xlim(min=-.005, max=.005) + geom_hline(yintercept = 0) + geom_vline(xintercept = 0) + ggtitle(paste(pval,rval,"Timepoint", pstart))
+corr.plot = corr.plot  + theme(legend.position="none") + labs(x = "Pattern Similarity Difference", y = "Reaction Time Difference") + xlim(min=-.2, max=.21) + geom_hline(yintercept = 0) + geom_vline(xintercept = 0) + ggtitle(paste(pval,rval,"Timepoint", pstart))
 corr.plot = corr.plot + theme(text = element_text(size = 25, face = "bold"))
 corr.plot
-
 # ggtitle(paste(region,pval,rval,prange))
-# 
 
-# ggsave(sprintf('march19_corr_figs/%s_corrplot_pstart%dpend%d.pdf',region,pstart,pend), plot = corr.plot, dpi = 600,width = 8, height = 5.5,units = "in")
+ggsave(sprintf('march19_corr_figs/%s_intact-scrambled_corrplot_pstart%dpend%d.pdf',region,pstart,pend), plot = corr.plot, dpi = 600,width = 8, height = 5.5,units = "in")
 }
 
 ```
 
 
 ```{r}
-wbr.anyps.corrplot(region="near_hipp_head_L",pstart =6,pend=6)
+wbr.anyps.corrplot(region="pm_sub",pstart =21,pend=21)
 
 
 ```
@@ -1033,7 +1020,7 @@ lapply(unique(rsa$roi),wbr.scrambledonly.corrplot,pstart =21,pend=25)
 ```{r}
 pvalues = c()
 
-wbr.intacteachp.corrplot = function(region,pstart) {
+wbr.intacteachp.corrplot = function(region,psta) {
 rsa.diff.ps = rsa %>% filter(sub != "s023") 
 # 
 
@@ -1088,7 +1075,7 @@ wbr.window.corrplot = function(midval,region,winval) {
 rsa.diff.ps = rsa %>% filter(sub != "s023") 
 # 
 
-rsa.diff.ps = rsa.diff.ps %>% filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub,condition,roi_group) %>% filter(roi == region, condition != "random") %>% summarise(simmean = mean(similarity))
+rsa.diff.ps = rsa.diff.ps %>% filter(position %in% (midval-winval):(midval+winval)) %>% group_by(sub,condition,roi_group) %>% filter(roi_group == region, condition != "random") %>% summarise(simmean = mean(similarity))
 rsa.diff.ps = rsa.diff.ps %>%  spread(condition, simmean) 
 rsa.diff.ps = rsa.diff.ps %>% mutate(psdiffs = intact - scrambled)
 rsa.diff.ps = data.frame(rsa.diff.ps)
@@ -1116,15 +1103,23 @@ return(out)
 
 ```{r}
 # lapply(1:32,wbr.window.corrplot,winval = 5,region="lh-Prec")
-corrdat = lapply(1:32,wbr.window.corrplot,winval = 0,region="near_hipp_head_L") # 
+
+# Calculate the number of cores
+no_cores = detectCores() - 1
+# Initiate cluster
+cl = makeCluster(no_cores,type = "FORK")
+
+corrdat = parLapply(cl,1:32,wbr.window.corrplot,winval = 0,region="LANG") # pm_sub late, temporal tp6, mpfc tp7, pfc othergroup tp7
 corrdat = data.frame(matrix(unlist(corrdat), nrow=32, byrow=T))
 corrdat$timepoint = 1:32
 corrdat = plyr::rename(corrdat, c("X1"="pval","X2"="rval"))
+
+stopCluster(cl)
 ```
 
 ```{r}
 corr.plot = ggplot(data = corrdat,(aes(x =timepoint , y= rval,group =1)))  + geom_point(size = 3) +geom_line(size =2) + theme(text = element_text(size = 30, face = "bold"))  + ylab("Pearson's r") + 
-geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits = c(-.3,.6)) 
+geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits = c(-.5,.5)) 
   # geom_segment(x = 2,y =-.05,xend= 2,yend = .05, color = "red",size=.75) +
   # geom_segment(x = 3,y =-.05,xend= 3,yend = .05, color = "red",size=.75) +
   # geom_segment(x = 4,y =-.05,xend= 4,yend = .05, color = "red",size=.75) +
@@ -1132,8 +1127,8 @@ geom_hline(aes(yintercept = 0)) + scale_y_continuous(limits = c(-.3,.6))
   # geom_segment(x = 13,y =-.05,xend= 13,yend = .05, color = "red",size=.75) +
 
 corr.plot
-# ggsave("march19_corr_figs/corrplot_win0_univariate_AT_ns.pdf", plot = corr.plot, dpi = 600,width = 8, height = 5,units = "in")
-
+# ggsave("march19_corr_figs/slidingcorrplot_rsa_pmmtl_ns.pdf", plot = corr.plot, dpi = 600,width = 8, height = 5,units = "in")
+## 11-16 are sig
 ```
 
 # merge the HIPP

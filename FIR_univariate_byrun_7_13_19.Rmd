@@ -140,35 +140,59 @@ rsa = rsa %>% group_by(sub,condition,roi,position,runnum) %>% summarise(similari
 rsa$roi = gsub("-", "_", rsa$roi)
 rsa$roi = gsub("reslice_", "", rsa$roi)
 
-# PMAT 3.0 labels
-# modulelabs = read.table("2_18_glasser_pmat_labels_forR.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
-# adds node strength
-modulelabs = read.table("2_20_glasser_pmat_nodestrength.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
-# convert nodestrength to percentile
-modulelabspct = modulelabs %>%  group_by(Module) %>% mutate(p_node = percent_rank(node_strength)) %>% ungroup()
-topmodulelabs = modulelabspct %>% filter(p_node >= .15)
+# # PMAT 3.0 labels
+# # modulelabs = read.table("2_18_glasser_pmat_labels_forR.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+# # adds node strength
+# modulelabs = read.table("2_20_glasser_pmat_nodestrength.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+# # convert nodestrength to percentile
+# modulelabspct = modulelabs %>%  group_by(Module) %>% mutate(p_node = percent_rank(node_strength)) %>% ungroup()
+# topmodulelabs = modulelabspct %>% filter(p_node >= .15)
+# 
+# LANGrois = topmodulelabs %>%  filter(Module == 1)
+# PMrois = topmodulelabs %>%  filter(Module == 2)
+# ATrois = topmodulelabs %>%  filter(Module == 3)
+# 
+# # LANGrois = modulelabs %>%  filter(Module == 1)
+# # PMrois = modulelabs %>%  filter(Module == 2)
+# # ATrois = modulelabs %>%  filter(Module == 3)
+# 
+# # problem ROI, needs investigating
+# PMrois = PMrois %>%  filter(ROI != "L_s6-8_ROI")
+# 
+# # make networks factor
+# rsa$lang = rsa$roi %in% LANGrois$ROI
+# rsa$AT = rsa$roi %in% ATrois$ROI
+# rsa$PM = rsa$roi %in% PMrois$ROI
+# 
+# rsa$vischeck = grepl(".*V1_ROI",rsa$roi)
+# # rsa$vischeck = grepl(".*V\\d.*",rsa$roi)
+# 
+# # now assign group label in single column
+# rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$lang == TRUE, "LANG", ifelse(rsa$vischeck == TRUE, "VIS", "other"))))
 
-LANGrois = topmodulelabs %>%  filter(Module == 1)
-PMrois = topmodulelabs %>%  filter(Module == 2)
-ATrois = topmodulelabs %>%  filter(Module == 3)
-
-# LANGrois = modulelabs %>%  filter(Module == 1)
-# PMrois = modulelabs %>%  filter(Module == 2)
-# ATrois = modulelabs %>%  filter(Module == 3)
+# 10_9_19 4net module labs
+modulelabs = read.table("4net_labels_10_9_19.csv",header = TRUE, stringsAsFactors = TRUE, sep =",")
+modulelabs$ROI = gsub("-", "_", modulelabs$ROI)
+PMrois = modulelabs %>%  filter(network == 1)
+LATrois = modulelabs %>%  filter(network == 2)
+ATrois = modulelabs %>%  filter(network == 3)
+FPNrois = modulelabs %>%  filter(network == 4)
 
 # problem ROI, needs investigating
-PMrois = PMrois %>%  filter(ROI != "L_s6-8_ROI")
+# PMrois = PMrois %>%  filter(ROI != "L_s6-8_ROI")
+PMrois = PMrois %>%  filter(ROI != "L_s6_8_ROI")
+
 
 # make networks factor
-rsa$lang = rsa$roi %in% LANGrois$ROI
+rsa$LAT = rsa$roi %in% LATrois$ROI
 rsa$AT = rsa$roi %in% ATrois$ROI
 rsa$PM = rsa$roi %in% PMrois$ROI
+rsa$FPN = rsa$roi %in% FPNrois$ROI
 
-rsa$vischeck = grepl(".*V1_ROI",rsa$roi)
 # rsa$vischeck = grepl(".*V\\d.*",rsa$roi)
 
 # now assign group label in single column
-rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$lang == TRUE, "LANG", ifelse(rsa$vischeck == TRUE, "VIS", "other"))))
+rsa$roi_group = ifelse(rsa$PM == TRUE, "PM", ifelse(rsa$AT == TRUE, "AT", ifelse(rsa$LAT == TRUE, "LAT", ifelse(rsa$FPN == TRUE, "FPN", "other"))))
 
 # delete the logical vectors
 rsa[,7:10] = NULL
@@ -176,28 +200,28 @@ rsa[,7:10] = NULL
 rsa$roi_group = as.factor(rsa$roi_group)
 
 ###### adding sub networks 
-mpfc_subgroup = modulelabs %>% filter(sub_group == "mpfc")
-pm_subgroup = modulelabs %>% filter(sub_group == "posterior_medial")
-lp_subgroup = modulelabs %>% filter(sub_group == "lateral_parietal")
-t_subgroup = modulelabs %>% filter(sub_group == "temporal")
-d_subgroup = modulelabs %>% filter(sub_group == "dpfc")
-mtl_subgroup = modulelabs %>% filter(sub_group == "mtl")
-
-rsa$pm_subgroup = rsa$roi %in% pm_subgroup$ROI
-rsa$mpfc_subgroup = rsa$roi %in% mpfc_subgroup$ROI
-rsa$lp_subgroup = rsa$roi %in% lp_subgroup$ROI
-rsa$t_subgroup = rsa$roi %in% t_subgroup$ROI
-rsa$d_subgroup = rsa$roi %in% d_subgroup$ROI
-rsa$mtl_subgroup = rsa$roi %in% mtl_subgroup$ROI
-
-rsa$sub_group = ifelse(rsa$mpfc_subgroup == TRUE, "mpfc", ifelse(rsa$pm_subgroup == TRUE,"pm_sub",ifelse(rsa$lp_subgroup == TRUE, "lp",ifelse(rsa$t_subgroup == TRUE, "temporal",ifelse(rsa$d_subgroup == TRUE, "dorsal",ifelse(rsa$mtl_subgroup == TRUE, "mtl","tbd"))))))
-rsa$sub_group = as.factor(rsa$sub_group)
-
-
-
-rsa$othergroup = ifelse(rsa$sub_group == "lp" | rsa$sub_group == "pm_sub", "PM_super","other")
-
-rsa[,8:13] = NULL
+# # mpfc_subgroup = modulelabs %>% filter(sub_group == "mpfc")
+# # pm_subgroup = modulelabs %>% filter(sub_group == "posterior_medial")
+# # lp_subgroup = modulelabs %>% filter(sub_group == "lateral_parietal")
+# # t_subgroup = modulelabs %>% filter(sub_group == "temporal")
+# # d_subgroup = modulelabs %>% filter(sub_group == "dpfc")
+# # mtl_subgroup = modulelabs %>% filter(sub_group == "mtl")
+# # 
+# # rsa$pm_subgroup = rsa$roi %in% pm_subgroup$ROI
+# # rsa$mpfc_subgroup = rsa$roi %in% mpfc_subgroup$ROI
+# # rsa$lp_subgroup = rsa$roi %in% lp_subgroup$ROI
+# # rsa$t_subgroup = rsa$roi %in% t_subgroup$ROI
+# # rsa$d_subgroup = rsa$roi %in% d_subgroup$ROI
+# # rsa$mtl_subgroup = rsa$roi %in% mtl_subgroup$ROI
+# # 
+# # rsa$sub_group = ifelse(rsa$mpfc_subgroup == TRUE, "mpfc", ifelse(rsa$pm_subgroup == TRUE,"pm_sub",ifelse(rsa$lp_subgroup == TRUE, "lp",ifelse(rsa$t_subgroup == TRUE, "temporal",ifelse(rsa$d_subgroup == TRUE, "dorsal",ifelse(rsa$mtl_subgroup == TRUE, "mtl","tbd"))))))
+# # rsa$sub_group = as.factor(rsa$sub_group)
+# # 
+# # 
+# # 
+# # rsa$othergroup = ifelse(rsa$sub_group == "lp" | rsa$sub_group == "pm_sub", "PM_super","other")
+# 
+# rsa[,8:13] = NULL
 
 #############
 # rsa = read_csv("2_25_19_univariate_glasser_df.csv")
@@ -260,7 +284,7 @@ mpfc is -3.6 at tp 6 run2 --
 tbd      mpfc     pm_sub   dorsal   lp       mtl      temporal
 ```{r}
 # use this to get the true tstats for every timepoint. Chunk below will be used to ID cluster mass threshold
-tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="LANG",con1="intact",con2="scrambled", run="run1")
+tstatdat = lapply(1:32,wbr.sliding.ttest.network,winval=0,region="PM",con1="intact",con2="scrambled", run="run1")
 tstatdat = data.frame(matrix(unlist(tstatdat), nrow=32, byrow=T))
 tstatdat$timepoint = 1:32
 tstatdat = plyr::rename(tstatdat, c("X1"="pval","X2"="tval"))
